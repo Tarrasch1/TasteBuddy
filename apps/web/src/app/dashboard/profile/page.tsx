@@ -190,8 +190,8 @@ export default function ProfilePage() {
                   <p className="text-muted-foreground">@{user?.username}</p>
                   <p className="text-sm text-muted-foreground mt-2 flex items-center justify-center md:justify-start gap-1">
                     <Calendar className="h-4 w-4" />
-                    {user?.createdAt 
-                      ? `${formatDate(user.createdAt)} tarihinde katıldı`
+                    {(user as any)?.createdAt 
+                      ? `${formatDate((user as any).createdAt)} tarihinde katıldı`
                       : 'TasteBuddy üyesi'
                     }
                   </p>

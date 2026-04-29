@@ -57,8 +57,8 @@ export default function DashboardPage() {
       setActivities(feedResponse?.data || []);
       setStats({
         reviewCount: 0, // Would come from user profile
-        friendCount: friendsResponse?.pagination?.total || 0,
-        savedCount: savedVenuesResponse?.pagination?.total || 0,
+        friendCount: (friendsResponse as any)?.pagination?.total || 0,
+        savedCount: (savedVenuesResponse as any)?.pagination?.total || 0,
       });
     } catch (error) {
       console.error('Failed to load dashboard:', error);

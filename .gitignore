@@ -54,3 +54,5 @@ web-build
 # Prisma
 prisma/*.db
 prisma/migrations/**/migration_lock.toml
+
+apps/web/out/
