@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { toast } from 'sonner';
@@ -13,6 +14,7 @@ import { authApi } from '@/lib/api';
 export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const router = useRouter();
   const setAuth = useAuthStore((state) => state.setAuth);
 
   const {
@@ -29,7 +31,7 @@ export default function LoginPage() {
       const response = await authApi.login(data);
       setAuth(response.user, response.tokens);
       toast.success('Tekrar hoş geldin!');
-      window.location.href = '/dashboard';
+      router.push('/dashboard');
     } catch (error: any) {
       toast.error(error.message || 'Giriş yapılamadı');
     } finally {
