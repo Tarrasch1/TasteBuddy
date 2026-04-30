@@ -25,7 +25,7 @@ export default function NearbyPage() {
   const [userLocation, setUserLocation] = useState<LocationCoords | null>(null);
   const [viewMode, setViewMode] = useState<'list' | 'map'>('list');
   const [maxDistance, setMaxDistance] = useState<number>(5); // km
-  const [locationStatus, setLocationStatus] = useState<'checking' | 'granted' | 'denied' | 'fallback' | 'ip' | 'unavailable'>('checking');
+  const [locationStatus, setLocationStatus] = useState<'checking' | 'granted' | 'denied' | 'fallback' | 'ip' | 'cached' | 'unavailable'>('checking');
   const [showLocationPrompt, setShowLocationPrompt] = useState(false);
   const [venues, setVenues] = useState<TransformedVenue[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -42,7 +42,8 @@ export default function NearbyPage() {
       const location = await getCurrentLocation({
         useIPFallback: !forceGPS,
         useDefaultFallback: !forceGPS,
-        timeout: forceGPS ? 20000 : 10000,
+        timeout: forceGPS ? 10000 : 5000,
+        useCache: !forceGPS, // Don't use cache when forcing GPS
       });
 
       setUserLocation(location);
@@ -50,6 +51,9 @@ export default function NearbyPage() {
       if (location.source === 'gps') {
         setLocationStatus('granted');
         toast.success('GPS konumunuz alındı!');
+      } else if (location.source === 'cached') {
+        setLocationStatus('cached');
+        toast.success('Önbellek konumu kullanılıyor');
       } else if (location.source === 'ip') {
         setLocationStatus('ip');
         toast.info('IP tabanlı konum kullanılıyor');
@@ -334,10 +338,27 @@ export default function NearbyPage() {
                   <span>GPS konumunuz aktif ✓</span>
                   {userLocation.accuracy && (
                     <span className="text-xs opacity-75">
-                      (±{Math.round(userLocation.accuracy)}m hassasiyet)
+                      (±{Math.round(userLocation.accuracy)}m)
                     </span>
                   )}
                 </div>
+              </div>
+            )}
+
+            {/* Cached Location Banner */}
+            {locationStatus === 'cached' && (
+              <div className="p-3 bg-purple-50 dark:bg-purple-950/30 border border-purple-200 dark:border-purple-800 rounded-lg flex items-center justify-between">
+                <div className="flex items-center gap-2 text-sm text-purple-700 dark:text-purple-300">
+                  <Navigation className="h-4 w-4" />
+                  <span>Önbellek konumu kullanılıyor ⚡</span>
+                </div>
+                <button
+                  onClick={forceGPSLocation}
+                  disabled={isLoading}
+                  className="text-sm text-purple-600 dark:text-purple-400 hover:underline font-medium disabled:opacity-50"
+                >
+                  Yenile
+                </button>
               </div>
             )}
           </div>

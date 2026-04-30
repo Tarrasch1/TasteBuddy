@@ -1,10 +1,10 @@
-// Location Service - Enhanced geolocation with fallbacks
+// Location Service - Optimized geolocation with parallel fallbacks
 
 export interface LocationCoords {
   lat: number;
   lng: number;
   accuracy?: number;
-  source: 'gps' | 'ip' | 'manual' | 'fallback';
+  source: 'gps' | 'ip' | 'manual' | 'fallback' | 'cached';
 }
 
 export interface LocationError {
@@ -19,60 +19,119 @@ const ISTANBUL_CENTER: LocationCoords = {
   source: 'fallback',
 };
 
-// IP-based geolocation service (free, no API key needed)
-export async function getLocationByIP(): Promise<LocationCoords | null> {
-  // Try ipapi.co first (HTTPS, 1000 requests/day free)
-  try {
-    const response = await fetch('https://ipapi.co/json/');
-    const data = await response.json();
-    
-    if (data.latitude && data.longitude && !data.error) {
-      return {
-        lat: data.latitude,
-        lng: data.longitude,
-        accuracy: 5000, // IP geolocation is ~5km accuracy
-        source: 'ip',
-      };
-    }
-  } catch (error) {
-    console.warn('ipapi.co failed, trying alternative...');
-  }
+// Cache for quick access
+const LOCATION_CACHE_KEY = 'tastebuddy_last_location';
+const CACHE_MAX_AGE = 5 * 60 * 1000; // 5 minutes
 
-  // Fallback to ipwho.is (HTTPS, unlimited free tier)
+// Save location to cache
+function cacheLocation(coords: LocationCoords): void {
   try {
-    const response = await fetch('https://ipwho.is/');
-    const data = await response.json();
-    
-    if (data.success && data.latitude && data.longitude) {
-      return {
-        lat: data.latitude,
-        lng: data.longitude,
-        accuracy: 5000,
-        source: 'ip',
-      };
-    }
-  } catch (error) {
-    console.warn('ipwho.is also failed');
+    localStorage.setItem(LOCATION_CACHE_KEY, JSON.stringify({
+      ...coords,
+      timestamp: Date.now(),
+    }));
+  } catch {
+    // Ignore localStorage errors
   }
+}
 
-  // Final fallback to ip-api.com via HTTPS proxy workaround
+// Get cached location if still valid
+export function getCachedLocation(): LocationCoords | null {
   try {
-    const response = await fetch('https://freeipapi.com/api/json');
-    const data = await response.json();
-    
-    if (data.latitude && data.longitude) {
-      return {
-        lat: data.latitude,
-        lng: data.longitude,
-        accuracy: 5000,
-        source: 'ip',
-      };
+    const cached = localStorage.getItem(LOCATION_CACHE_KEY);
+    if (cached) {
+      const data = JSON.parse(cached);
+      if (Date.now() - data.timestamp < CACHE_MAX_AGE) {
+        return {
+          lat: data.lat,
+          lng: data.lng,
+          accuracy: data.accuracy,
+          source: 'cached',
+        };
+      }
     }
-  } catch (error) {
-    console.warn('All IP geolocation services failed');
+  } catch {
+    // Ignore errors
   }
-
   return null;
+}
+
+// IP-based geolocation - PARALLEL requests to multiple services
+export async function getLocationByIP(): Promise<LocationCoords | null> {
+  // Race all IP services in parallel - first one wins
+  const ipServices = [
+    // ipapi.co - fast and reliable
+    fetch('https://ipapi.co/json/', { signal: AbortSignal.timeout(3000) })
+      .then(r => r.json())
+      .then(data => {
+        if (data.latitude && data.longitude && !data.error) {
+          return { lat: data.latitude, lng: data.longitude, accuracy: 5000, source: 'ip' as const };
+        }
+        throw new Error('Invalid data');
+      }),
+    
+    // ipwho.is - good backup
+    fetch('https://ipwho.is/', { signal: AbortSignal.timeout(3000) })
+      .then(r => r.json())
+      .then(data => {
+        if (data.success && data.latitude && data.longitude) {
+          return { lat: data.latitude, lng: data.longitude, accuracy: 5000, source: 'ip' as const };
+        }
+        throw new Error('Invalid data');
+      }),
+    
+    // freeipapi.com - another backup
+    fetch('https://freeipapi.com/api/json', { signal: AbortSignal.timeout(3000) })
+      .then(r => r.json())
+      .then(data => {
+        if (data.latitude && data.longitude) {
+          return { lat: data.latitude, lng: data.longitude, accuracy: 5000, source: 'ip' as const };
+        }
+        throw new Error('Invalid data');
+      }),
+  ];
+
+  try {
+    // Promise.any returns first successful result
+    const result = await Promise.any(ipServices);
+    return result;
+  } catch {
+    console.warn('All IP geolocation services failed');
+    return null;
+  }
+}
+
+// Quick GPS location (low accuracy, faster)
+export function getQuickGPSLocation(timeout: number = 3000): Promise<LocationCoords> {
+  return new Promise((resolve, reject) => {
+    if (!navigator.geolocation) {
+      reject({ code: 'NOT_SUPPORTED', message: 'GPS desteklenmiyor' } as LocationError);
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        resolve({
+          lat: position.coords.latitude,
+          lng: position.coords.longitude,
+          accuracy: position.coords.accuracy,
+          source: 'gps',
+        });
+      },
+      (error) => {
+        reject({
+          code: error.code === 1 ? 'PERMISSION_DENIED' : 
+                error.code === 2 ? 'POSITION_UNAVAILABLE' : 'TIMEOUT',
+          message: error.message,
+        } as LocationError);
+      },
+      {
+        enableHighAccuracy: false, // Low accuracy = faster
+        timeout: timeout,
+        maximumAge: 60000, // Accept cached location up to 1 min
+      }
+    );
+  });
 }
 
 // High accuracy GPS location
@@ -92,8 +151,8 @@ export function getGPSLocation(options?: {
 
     const geoOptions: PositionOptions = {
       enableHighAccuracy: options?.enableHighAccuracy ?? true,
-      timeout: options?.timeout ?? 15000,
-      maximumAge: options?.maximumAge ?? 60000,
+      timeout: options?.timeout ?? 8000, // Reduced from 15s to 8s
+      maximumAge: options?.maximumAge ?? 30000, // Accept 30s old location
     };
 
     navigator.geolocation.getCurrentPosition(
@@ -112,11 +171,11 @@ export function getGPSLocation(options?: {
         switch (error.code) {
           case error.PERMISSION_DENIED:
             errorCode = 'PERMISSION_DENIED';
-            errorMessage = 'Konum izni reddedildi. Tarayıcı ayarlarından konum iznini etkinleştirin.';
+            errorMessage = 'Konum izni reddedildi.';
             break;
           case error.POSITION_UNAVAILABLE:
             errorCode = 'POSITION_UNAVAILABLE';
-            errorMessage = 'Konum bilgisi alınamadı. GPS\'inizi kontrol edin.';
+            errorMessage = 'Konum bilgisi alınamadı.';
             break;
           case error.TIMEOUT:
             errorCode = 'TIMEOUT';
@@ -149,12 +208,14 @@ export function watchLocation(
 
   return navigator.geolocation.watchPosition(
     (position) => {
-      onUpdate({
+      const coords: LocationCoords = {
         lat: position.coords.latitude,
         lng: position.coords.longitude,
         accuracy: position.coords.accuracy,
         source: 'gps',
-      });
+      };
+      cacheLocation(coords);
+      onUpdate(coords);
     },
     (error) => {
       let errorCode: LocationError['code'];
@@ -175,8 +236,8 @@ export function watchLocation(
     },
     {
       enableHighAccuracy: true,
-      timeout: 10000,
-      maximumAge: 30000,
+      timeout: 5000,
+      maximumAge: 10000,
     }
   );
 }
@@ -188,40 +249,84 @@ export function clearLocationWatch(watchId: number): void {
   }
 }
 
-// Main function: Get current location with fallbacks
+// OPTIMIZED: Get current location with parallel requests
 export async function getCurrentLocation(options?: {
   useIPFallback?: boolean;
   useDefaultFallback?: boolean;
   timeout?: number;
+  useCache?: boolean;
 }): Promise<LocationCoords> {
   const useIPFallback = options?.useIPFallback ?? true;
   const useDefaultFallback = options?.useDefaultFallback ?? true;
+  const useCache = options?.useCache ?? true;
 
-  // Try GPS first
+  // 1. Check cache first (instant)
+  if (useCache) {
+    const cached = getCachedLocation();
+    if (cached) {
+      console.log('Using cached location');
+      // Still try to get fresh location in background
+      getCurrentLocation({ ...options, useCache: false }).then(fresh => {
+        cacheLocation(fresh);
+      }).catch(() => {});
+      return cached;
+    }
+  }
+
+  // 2. Check permission status first
+  const permissionStatus = await checkLocationPermission();
+  
+  if (permissionStatus === 'denied') {
+    // Permission denied - skip GPS, go straight to IP
+    if (useIPFallback) {
+      const ipLocation = await getLocationByIP();
+      if (ipLocation) {
+        cacheLocation(ipLocation);
+        return ipLocation;
+      }
+    }
+    if (useDefaultFallback) {
+      return ISTANBUL_CENTER;
+    }
+    throw { code: 'PERMISSION_DENIED', message: 'Konum izni reddedildi' } as LocationError;
+  }
+
+  // 3. Run GPS and IP in PARALLEL - first valid result wins
+  const gpsPromise = getQuickGPSLocation(options?.timeout ?? 5000)
+    .then(result => {
+      console.log('GPS succeeded first');
+      return result;
+    })
+    .catch(err => {
+      console.warn('Quick GPS failed:', err.code);
+      throw err;
+    });
+
+  const ipPromise = useIPFallback 
+    ? getLocationByIP().then(result => {
+        if (!result) throw new Error('IP location failed');
+        console.log('IP succeeded');
+        return result;
+      })
+    : Promise.reject(new Error('IP fallback disabled'));
+
   try {
-    const gpsLocation = await getGPSLocation({ timeout: options?.timeout });
-    console.log('Got GPS location:', gpsLocation);
-    return gpsLocation;
-  } catch (gpsError) {
-    console.warn('GPS location failed:', gpsError);
-    
-    // If permission denied and no fallback, throw
-    if ((gpsError as LocationError).code === 'PERMISSION_DENIED' && !useIPFallback) {
-      throw gpsError;
+    // Race GPS vs IP - fastest wins
+    const result = await Promise.any([gpsPromise, ipPromise]);
+    cacheLocation(result);
+    return result;
+  } catch {
+    // Both failed, try high accuracy GPS as last resort
+    try {
+      const highAccuracyGPS = await getGPSLocation({ timeout: 8000 });
+      cacheLocation(highAccuracyGPS);
+      return highAccuracyGPS;
+    } catch (gpsError) {
+      console.warn('High accuracy GPS also failed:', gpsError);
     }
   }
 
-  // Try IP-based geolocation as fallback
-  if (useIPFallback) {
-    console.log('Trying IP-based geolocation...');
-    const ipLocation = await getLocationByIP();
-    if (ipLocation) {
-      console.log('Got IP location:', ipLocation);
-      return ipLocation;
-    }
-  }
-
-  // Use default fallback
+  // 4. Final fallback
   if (useDefaultFallback) {
     console.log('Using default Istanbul location');
     return ISTANBUL_CENTER;
