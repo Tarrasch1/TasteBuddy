@@ -200,6 +200,7 @@ export default function ProfilePage() {
   const [reviewFilter, setReviewFilter] = useState<ReviewFilter>('all');
   const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>('all');
   const [showBadgeModal, setShowBadgeModal] = useState<Badge | null>(null);
+  const [userReviews, setUserReviews] = useState(DEMO_USER_REVIEWS);
 
   // Calculate user badges and level
   const earnedBadges = DEMO_USER_BADGES;
@@ -218,6 +219,39 @@ export default function ProfilePage() {
       return;
     }
 
+    // Load user reviews from localStorage
+    const loadUserReviews = () => {
+      const userReviewsKey = 'tastebuddy_user_reviews';
+      const savedReviews = localStorage.getItem(userReviewsKey);
+      
+      if (savedReviews) {
+        const parsedReviews = JSON.parse(savedReviews);
+        // Transform localStorage reviews to profile format
+        const transformedReviews = parsedReviews.map((review: any) => ({
+          id: review.id,
+          type: review.type || 'venue',
+          venueName: review.venueName,
+          venueSlug: review.venueSlug,
+          itemName: review.itemName,
+          rating: review.rating,
+          comment: review.comment,
+          category: review.venueCategory?.name?.toLowerCase() || 'other',
+          photoUrl: review.photos?.[0] || null,
+          photos: review.photos || [],
+          createdAt: review.createdAt,
+          likes: 0,
+          comments: 0,
+          latitude: 41.0082, // Default Istanbul coords
+          longitude: 28.9784,
+        }));
+        
+        // Merge with demo reviews, user reviews first
+        setUserReviews([...transformedReviews, ...DEMO_USER_REVIEWS]);
+      }
+    };
+    
+    loadUserReviews();
+
     // Simulate loading
     setTimeout(() => setIsLoading(false), 500);
   }, [isAuthenticated, hasHydrated, router]);
@@ -234,7 +268,7 @@ export default function ProfilePage() {
   };
 
   // Filter reviews
-  const filteredReviews = DEMO_USER_REVIEWS.filter(review => {
+  const filteredReviews = userReviews.filter(review => {
     if (reviewFilter !== 'all' && review.rating !== parseInt(reviewFilter)) {
       return false;
     }
@@ -245,7 +279,7 @@ export default function ProfilePage() {
   });
 
   // Get unique categories from reviews
-  const reviewCategories = [...new Set(DEMO_USER_REVIEWS.map(r => r.category))];
+  const reviewCategories = [...new Set(userReviews.map(r => r.category))];
 
   // Group badges by category
   const badgesByCategory = earnedBadges.reduce((acc, ub) => {
@@ -343,11 +377,11 @@ export default function ProfilePage() {
               {/* Quick Stats */}
               <div className="grid grid-cols-4 gap-4 mt-6">
                 <div className="text-center">
-                  <p className="text-2xl font-bold">{DEMO_USER_STATS.reviewCount}</p>
+                  <p className="text-2xl font-bold">{userReviews.length}</p>
                   <p className="text-xs text-muted-foreground">Değerlendirme</p>
                 </div>
                 <div className="text-center">
-                  <p className="text-2xl font-bold">{DEMO_USER_STATS.venueCount}</p>
+                  <p className="text-2xl font-bold">{new Set(userReviews.map(r => r.venueSlug)).size}</p>
                   <p className="text-xs text-muted-foreground">Mekan</p>
                 </div>
                 <div className="text-center">
@@ -665,26 +699,26 @@ export default function ProfilePage() {
 
             {/* Map */}
             <div className="rounded-xl overflow-hidden border">
-              <ProfileMap reviews={DEMO_USER_REVIEWS} />
+              <ProfileMap reviews={userReviews} />
             </div>
 
             {/* Stats */}
             <div className="grid grid-cols-3 gap-4">
               <div className="bg-card border rounded-xl p-4 text-center">
                 <p className="text-2xl font-bold text-green-500">
-                  {DEMO_USER_REVIEWS.filter(r => r.rating >= 4).length}
+                  {userReviews.filter(r => r.rating >= 4).length}
                 </p>
                 <p className="text-sm text-muted-foreground">Yüksek Puan</p>
               </div>
               <div className="bg-card border rounded-xl p-4 text-center">
                 <p className="text-2xl font-bold text-yellow-500">
-                  {DEMO_USER_REVIEWS.filter(r => r.rating >= 3 && r.rating < 4).length}
+                  {userReviews.filter(r => r.rating >= 3 && r.rating < 4).length}
                 </p>
                 <p className="text-sm text-muted-foreground">Orta Puan</p>
               </div>
               <div className="bg-card border rounded-xl p-4 text-center">
                 <p className="text-2xl font-bold text-red-500">
-                  {DEMO_USER_REVIEWS.filter(r => r.rating < 3).length}
+                  {userReviews.filter(r => r.rating < 3).length}
                 </p>
                 <p className="text-sm text-muted-foreground">Düşük Puan</p>
               </div>
@@ -694,7 +728,7 @@ export default function ProfilePage() {
             <div className="bg-card border rounded-xl p-4">
               <h3 className="font-semibold mb-3">Ziyaret Edilen Mekanlar</h3>
               <div className="space-y-2 max-h-64 overflow-y-auto">
-                {DEMO_USER_REVIEWS.map((review) => (
+                {userReviews.map((review) => (
                   <Link
                     key={review.id}
                     href={`/venues/${review.venueSlug}`}
