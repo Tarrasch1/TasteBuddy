@@ -8,12 +8,13 @@ import {
   Heart, MessageCircle, Bookmark, Share2, MoreHorizontal,
   Star, MapPin, Utensils, Coffee, Camera, Award, TrendingUp,
   Users, Bell, Search, Home, Compass, Trophy, User, ChevronRight,
-  ThumbsUp, Send, X, Filter
+  ThumbsUp, Send, X, Filter, Plus
 } from 'lucide-react';
 import { useAuthStore } from '@/stores/auth-store';
 import { toast } from 'sonner';
 import { formatDistanceToNow } from 'date-fns';
 import { tr } from 'date-fns/locale';
+import AddReviewModal from '@/components/add-review-modal';
 
 interface FeedItem {
   id: string;
@@ -290,6 +291,7 @@ export default function FeedPage() {
   const [expandedComments, setExpandedComments] = useState<string | null>(null);
   const [commentText, setCommentText] = useState('');
   const [filter, setFilter] = useState<'all' | 'reviews' | 'badges'>('all');
+  const [showAddReview, setShowAddReview] = useState(false);
 
   useEffect(() => {
     if (hasHydrated && !isAuthenticated) {
@@ -751,6 +753,21 @@ export default function FeedPage() {
           </aside>
         </div>
       </main>
+
+      {/* Floating Action Button - Add Review */}
+      <button
+        onClick={() => setShowAddReview(true)}
+        className="fixed bottom-20 lg:bottom-6 right-6 z-40 w-14 h-14 bg-primary text-primary-foreground rounded-full shadow-lg hover:bg-primary/90 hover:scale-110 transition-all flex items-center justify-center group"
+        title="Değerlendirme Ekle"
+      >
+        <Plus className="h-6 w-6 group-hover:rotate-90 transition-transform" />
+      </button>
+
+      {/* Add Review Modal */}
+      <AddReviewModal 
+        isOpen={showAddReview} 
+        onClose={() => setShowAddReview(false)} 
+      />
 
       {/* Mobile Bottom Navigation */}
       <nav className="lg:hidden fixed bottom-0 left-0 right-0 bg-background border-t z-50">

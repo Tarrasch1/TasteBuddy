@@ -5,10 +5,11 @@ import Link from 'next/link';
 import Image from 'next/image';
 import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
-import { Search, MapPin, Star, Loader2, Map, List, Navigation, User, LogOut, Settings, Bookmark, Bell, X, TrendingUp, ChevronRight, Flame, Sparkles, Heart, ThumbsUp } from 'lucide-react';
+import { Search, MapPin, Star, Loader2, Map, List, Navigation, User, LogOut, Settings, Bookmark, Bell, X, TrendingUp, ChevronRight, Flame, Sparkles, Heart, ThumbsUp, Plus } from 'lucide-react';
 import { useAuthStore } from '@/stores/auth-store';
 import { useDebounce } from '@/hooks/use-debounce';
 import type { MapVenue } from '@/components/venue-map';
+import AddReviewModal from '@/components/add-review-modal';
 
 // Dynamic import for Map to avoid SSR issues
 const VenueMap = dynamic(() => import('@/components/venue-map'), {
@@ -472,6 +473,7 @@ export default function ExplorePage() {
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showWeeklyPopular, setShowWeeklyPopular] = useState(true);
   const [showForYou, setShowForYou] = useState(true);
+  const [showAddReview, setShowAddReview] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   
   // Debounce search query for better performance (150ms delay)
@@ -967,6 +969,23 @@ export default function ExplorePage() {
           </div>
         )}
       </main>
+
+      {/* Floating Action Button - Add Review */}
+      {isAuthenticated && (
+        <button
+          onClick={() => setShowAddReview(true)}
+          className="fixed bottom-6 right-6 z-40 w-14 h-14 bg-primary text-primary-foreground rounded-full shadow-lg hover:bg-primary/90 hover:scale-110 transition-all flex items-center justify-center group"
+          title="Değerlendirme Ekle"
+        >
+          <Plus className="h-6 w-6 group-hover:rotate-90 transition-transform" />
+        </button>
+      )}
+
+      {/* Add Review Modal */}
+      <AddReviewModal 
+        isOpen={showAddReview} 
+        onClose={() => setShowAddReview(false)} 
+      />
     </div>
   );
 }
