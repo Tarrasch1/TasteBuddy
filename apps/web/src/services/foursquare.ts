@@ -153,6 +153,8 @@ export const getCategoryNameTR = (categoryName: string): string => {
 
 // Search for places near a location
 export async function searchPlaces(params: PlaceSearchParams): Promise<FoursquarePlace[]> {
+  console.log('Foursquare API Key:', FOURSQUARE_API_KEY ? `Present (${FOURSQUARE_API_KEY.slice(0, 10)}...)` : 'MISSING');
+  
   if (!FOURSQUARE_API_KEY) {
     console.error('Foursquare API key is not configured - returning empty');
     return [];
@@ -175,7 +177,7 @@ export async function searchPlaces(params: PlaceSearchParams): Promise<Foursquar
   }
 
   const url = `${BASE_URL}/places/search?${searchParams}`;
-  console.log('Foursquare API request:', url);
+  console.log('Foursquare API request URL:', url);
 
   try {
     const response = await fetch(url, {
@@ -185,19 +187,32 @@ export async function searchPlaces(params: PlaceSearchParams): Promise<Foursquar
       },
     });
 
-    console.log('Foursquare API response status:', response.status);
+    console.log('Foursquare API response status:', response.status, response.statusText);
 
     if (!response.ok) {
-      const error = await response.text();
-      console.error('Foursquare API error:', response.status, error);
+      const errorText = await response.text();
+      console.error('Foursquare API error details:', {
+        status: response.status,
+        statusText: response.statusText,
+        body: errorText,
+      });
+      
+      // Parse error for user-friendly message
+      try {
+        const errorJson = JSON.parse(errorText);
+        console.error('Foursquare error message:', errorJson.message || errorJson.error);
+      } catch {
+        console.error('Raw error:', errorText);
+      }
+      
       return [];
     }
 
     const data = await response.json();
-    console.log('Foursquare API results:', data.results?.length || 0, 'places');
+    console.log('Foursquare API success! Found', data.results?.length || 0, 'places');
     return data.results || [];
   } catch (error) {
-    console.error('Failed to fetch places:', error);
+    console.error('Failed to fetch places (network error):', error);
     return [];
   }
 }

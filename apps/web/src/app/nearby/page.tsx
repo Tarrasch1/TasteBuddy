@@ -5,7 +5,7 @@ import Link from 'next/link';
 import dynamic from 'next/dynamic';
 import { MapPin, Star, Loader2, Navigation, ChevronLeft, Map, List, RefreshCw, Wifi, WifiOff, Search } from 'lucide-react';
 import { toast } from 'sonner';
-import { searchPlaces, transformFoursquarePlace, TransformedVenue, ALL_FOOD_CATEGORIES } from '@/services/foursquare';
+import { searchOSMVenues, transformOSMVenue, TransformedVenue } from '@/services/openstreetmap';
 import { getCurrentLocation, LocationCoords, calculateDistance, formatDistance } from '@/services/location';
 
 // Dynamic import for Map
@@ -132,22 +132,20 @@ export default function NearbyPage() {
     }
   }, []);
 
-  // Fetch venues from Foursquare API
+  // Fetch venues from OpenStreetMap Overpass API
   const fetchVenues = async (location: LocationCoords) => {
     setIsSearching(true);
     
     try {
-      const places = await searchPlaces({
-        ll: `${location.lat},${location.lng}`,
-        radius: maxDistance * 1000, // Convert to meters
-        limit: 50,
-        sort: 'DISTANCE',
-        categories: ALL_FOOD_CATEGORIES,
-        query: searchQuery || undefined,
-      });
+      const osmVenues = await searchOSMVenues(
+        location.lat,
+        location.lng,
+        maxDistance * 1000, // Convert to meters
+        50
+      );
 
-      if (places.length > 0) {
-        const transformedVenues = places.map(transformFoursquarePlace);
+      if (osmVenues.length > 0) {
+        const transformedVenues = osmVenues.map(transformOSMVenue);
         
         // Calculate accurate distances
         const venuesWithDistance = transformedVenues.map(venue => ({
@@ -165,14 +163,15 @@ export default function NearbyPage() {
         
         setVenues(venuesWithDistance);
         setDataSource('api');
-        console.log(`Found ${venuesWithDistance.length} venues from Foursquare`);
+        console.log(`Found ${venuesWithDistance.length} venues from OpenStreetMap`);
+        toast.success(`${venuesWithDistance.length} mekan bulundu`);
       } else {
         // No results from API, use demo fallback data
-        console.log('No API results, using demo data');
+        console.log('No OSM results, using demo data');
         const demoVenues = getDemoVenues(location);
         setVenues(demoVenues);
         setDataSource('fallback');
-        toast.info('Demo mekanlar gösteriliyor (API bağlantısı yok)');
+        toast.info('Bu bölgede mekan bulunamadı, demo veriler gösteriliyor');
       }
     } catch (error) {
       console.error('Failed to fetch venues:', error);
@@ -180,7 +179,7 @@ export default function NearbyPage() {
       const demoVenues = getDemoVenues(location);
       setVenues(demoVenues);
       setDataSource('fallback');
-      toast.error('API bağlantısı başarısız, demo veriler gösteriliyor');
+      toast.error('Bağlantı hatası, demo veriler gösteriliyor');
     } finally {
       setIsSearching(false);
       setIsLoading(false);
@@ -471,7 +470,7 @@ export default function NearbyPage() {
               {filteredVenues.length} mekan bulundu ({maxDistance} km içinde)
             </p>
             <span className="text-xs px-2 py-1 bg-muted rounded-full text-muted-foreground">
-              {dataSource === 'api' ? '🌐 Foursquare' : '📦 Demo'}
+              {dataSource === 'api' ? '🗺️ OpenStreetMap' : '📦 Demo'}
             </span>
           </div>
         )}
@@ -554,8 +553,8 @@ export default function NearbyPage() {
                     {venue.reviewCount > 0 && (
                       <span className="text-muted-foreground">{venue.reviewCount} değerlendirme</span>
                     )}
-                    {venue.source === 'foursquare' && (
-                      <span className="text-xs text-blue-500">🌐</span>
+                    {venue.source === 'osm' && (
+                      <span className="text-xs text-green-500">🗺️</span>
                     )}
                   </div>
                 </div>
