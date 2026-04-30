@@ -35,6 +35,16 @@ function cacheLocation(coords: LocationCoords): void {
   }
 }
 
+// Clear location cache
+export function clearLocationCache(): void {
+  try {
+    localStorage.removeItem(LOCATION_CACHE_KEY);
+    console.log('Location cache cleared');
+  } catch {
+    // Ignore localStorage errors
+  }
+}
+
 // Get cached location if still valid
 export function getCachedLocation(): LocationCoords | null {
   try {
@@ -291,38 +301,39 @@ export async function getCurrentLocation(options?: {
     throw { code: 'PERMISSION_DENIED', message: 'Konum izni reddedildi' } as LocationError;
   }
 
-  // 3. Run GPS and IP in PARALLEL - first valid result wins
-  const gpsPromise = getQuickGPSLocation(options?.timeout ?? 5000)
-    .then(result => {
-      console.log('GPS succeeded first');
-      return result;
-    })
-    .catch(err => {
-      console.warn('Quick GPS failed:', err.code);
-      throw err;
-    });
-
-  const ipPromise = useIPFallback 
-    ? getLocationByIP().then(result => {
-        if (!result) throw new Error('IP location failed');
-        console.log('IP succeeded');
-        return result;
-      })
-    : Promise.reject(new Error('IP fallback disabled'));
-
+  // 3. GPS PREFERRED strategy - Try GPS first, use IP only if GPS fails
+  // IP geolocation is often inaccurate (city-level only)
+  
   try {
-    // Race GPS vs IP - fastest wins
-    const result = await Promise.any([gpsPromise, ipPromise]);
-    cacheLocation(result);
-    return result;
-  } catch {
-    // Both failed, try high accuracy GPS as last resort
-    try {
-      const highAccuracyGPS = await getGPSLocation({ timeout: 8000 });
-      cacheLocation(highAccuracyGPS);
-      return highAccuracyGPS;
-    } catch (gpsError) {
-      console.warn('High accuracy GPS also failed:', gpsError);
+    // First try quick GPS (3 seconds)
+    const quickGPS = await getQuickGPSLocation(3000);
+    console.log('Quick GPS succeeded:', quickGPS.accuracy, 'm accuracy');
+    cacheLocation(quickGPS);
+    return quickGPS;
+  } catch (quickGpsError) {
+    console.warn('Quick GPS failed:', (quickGpsError as LocationError).code);
+  }
+
+  // Quick GPS failed, try high accuracy GPS with longer timeout
+  try {
+    const highAccuracyGPS = await getGPSLocation({ 
+      timeout: options?.timeout ?? 8000,
+      enableHighAccuracy: true 
+    });
+    console.log('High accuracy GPS succeeded:', highAccuracyGPS.accuracy, 'm accuracy');
+    cacheLocation(highAccuracyGPS);
+    return highAccuracyGPS;
+  } catch (gpsError) {
+    console.warn('High accuracy GPS also failed:', (gpsError as LocationError).code);
+  }
+
+  // GPS completely failed, fall back to IP
+  if (useIPFallback) {
+    const ipLocation = await getLocationByIP();
+    if (ipLocation) {
+      console.log('Using IP geolocation (less accurate)');
+      cacheLocation(ipLocation);
+      return ipLocation;
     }
   }
 

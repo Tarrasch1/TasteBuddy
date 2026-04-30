@@ -6,7 +6,7 @@ import dynamic from 'next/dynamic';
 import { MapPin, Star, Loader2, Navigation, ChevronLeft, Map, List, RefreshCw, Wifi, WifiOff, Search } from 'lucide-react';
 import { toast } from 'sonner';
 import { searchOSMVenues, transformOSMVenue, TransformedVenue } from '@/services/openstreetmap';
-import { getCurrentLocation, LocationCoords, calculateDistance, formatDistance } from '@/services/location';
+import { getCurrentLocation, LocationCoords, calculateDistance, formatDistance, clearLocationCache } from '@/services/location';
 
 // Dynamic import for Map
 const VenueMap = dynamic(() => import('@/components/venue-map'), {
@@ -220,8 +220,10 @@ export default function NearbyPage() {
     await fetchVenues(fallbackLocation);
   };
 
-  // Force GPS location
+  // Force GPS location (clears cache first)
   const forceGPSLocation = () => {
+    clearLocationCache(); // Clear any cached location
+    toast.info('Cache temizlendi, GPS konumu alınıyor...');
     fetchLocationAndVenues(true);
   };
 
@@ -398,6 +400,13 @@ export default function NearbyPage() {
                     </span>
                   )}
                 </div>
+                <button
+                  onClick={forceGPSLocation}
+                  disabled={isLoading}
+                  className="text-sm text-green-600 dark:text-green-400 hover:underline font-medium disabled:opacity-50"
+                >
+                  Yenile
+                </button>
               </div>
             )}
 
