@@ -5,7 +5,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
-import { Search, MapPin, Star, Loader2, Map, List, Navigation, User, LogOut, Settings, Bookmark, Bell, X } from 'lucide-react';
+import { Search, MapPin, Star, Loader2, Map, List, Navigation, User, LogOut, Settings, Bookmark, Bell, X, TrendingUp, ChevronRight, Flame } from 'lucide-react';
 import { useAuthStore } from '@/stores/auth-store';
 import { useDebounce } from '@/hooks/use-debounce';
 import type { MapVenue } from '@/components/venue-map';
@@ -285,18 +285,92 @@ const DEMO_CATEGORIES: Category[] = [
   { id: '10', name: 'Sağlıklı', slug: 'saglikli', icon: '🥗' },
 ];
 
+// İstanbul ilçeleri
+const DISTRICTS = [
+  { id: 'all', name: 'Tüm İlçeler' },
+  { id: 'besiktas', name: 'Beşiktaş' },
+  { id: 'kadikoy', name: 'Kadıköy' },
+  { id: 'beyoglu', name: 'Beyoğlu' },
+  { id: 'sisli', name: 'Şişli' },
+  { id: 'uskudar', name: 'Üsküdar' },
+  { id: 'fatih', name: 'Fatih' },
+  { id: 'sariyer', name: 'Sarıyer' },
+  { id: 'bakirkoy', name: 'Bakırköy' },
+];
+
+// Haftanın Popüler Lezzetleri
+const WEEKLY_POPULAR = [
+  {
+    id: 'wp1',
+    type: 'item' as const,
+    name: 'Kuşbaşılı Kaşarlı Pide',
+    venueName: 'Karadeniz Pide Salonu',
+    venueSlug: 'karadeniz-pide-salonu',
+    rating: 4.9,
+    reviewCount: 234,
+    icon: '🥟',
+    trend: '+15%',
+  },
+  {
+    id: 'wp2',
+    type: 'item' as const,
+    name: 'Künefe',
+    venueName: 'İmam Çağdaş',
+    venueSlug: 'imam-cagdas',
+    rating: 4.8,
+    reviewCount: 189,
+    icon: '🍯',
+    trend: '+22%',
+  },
+  {
+    id: 'wp3',
+    type: 'venue' as const,
+    name: 'Çiya Sofrası',
+    venueName: 'Çiya Sofrası',
+    venueSlug: 'ciya-sofrasi',
+    rating: 4.7,
+    reviewCount: 312,
+    icon: '🍲',
+    trend: '+8%',
+  },
+  {
+    id: 'wp4',
+    type: 'item' as const,
+    name: 'Double Cheeseburger',
+    venueName: 'Şef\'s Burger',
+    venueSlug: 'sefs-burger',
+    rating: 4.6,
+    reviewCount: 156,
+    icon: '🍔',
+    trend: '+12%',
+  },
+  {
+    id: 'wp5',
+    type: 'item' as const,
+    name: 'Filtre Kahve',
+    venueName: 'Kronotrop',
+    venueSlug: 'kronotrop-coffee',
+    rating: 4.8,
+    reviewCount: 278,
+    icon: '☕',
+    trend: '+5%',
+  },
+];
+
 export default function ExplorePage() {
   const router = useRouter();
   const { isAuthenticated, user, hasHydrated, logout } = useAuthStore();
   const [venues, setVenues] = useState<Venue[]>(DEMO_VENUES); // Start with venues loaded
   const [categories, setCategories] = useState<Category[]>(DEMO_CATEGORIES);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [selectedDistrict, setSelectedDistrict] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [viewMode, setViewMode] = useState<'list' | 'map'>('list');
   const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [selectedVenue, setSelectedVenue] = useState<Venue | null>(null);
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const [showWeeklyPopular, setShowWeeklyPopular] = useState(true);
   const menuRef = useRef<HTMLDivElement>(null);
   
   // Debounce search query for better performance (150ms delay)
@@ -349,6 +423,22 @@ export default function ExplorePage() {
         result = result.filter(v => v.category.name === category.name);
       }
     }
+
+    // Filter by district (basic address matching for demo)
+    if (selectedDistrict && selectedDistrict !== 'all') {
+      const districtName = DISTRICTS.find(d => d.id === selectedDistrict)?.name.toLowerCase();
+      if (districtName) {
+        result = result.filter(v => 
+          v.address.toLowerCase().includes(districtName) ||
+          // Map some locations to districts for demo
+          (selectedDistrict === 'besiktas' && (v.address.includes('Etiler') || v.address.includes('Bebek') || v.address.includes('Ulus'))) ||
+          (selectedDistrict === 'kadikoy' && (v.address.includes('Kadıköy') || v.address.includes('Caferağa') || v.address.includes('Bağdat'))) ||
+          (selectedDistrict === 'beyoglu' && (v.address.includes('Beyoğlu') || v.address.includes('İstiklal') || v.address.includes('Cihangir') || v.address.includes('Karaköy') || v.address.includes('Pera'))) ||
+          (selectedDistrict === 'sisli' && (v.address.includes('Nişantaşı') || v.address.includes('Şişli') || v.address.includes('Levent') || v.address.includes('Kanyon'))) ||
+          (selectedDistrict === 'fatih' && v.address.includes('Sultanahmet'))
+        );
+      }
+    }
     
     // Use debounced search query for filtering
     if (debouncedSearchQuery.trim()) {
@@ -362,7 +452,7 @@ export default function ExplorePage() {
     }
     
     return result;
-  }, [venues, selectedCategory, debouncedSearchQuery, categories]);
+  }, [venues, selectedCategory, selectedDistrict, debouncedSearchQuery, categories]);
 
   const mapVenues: MapVenue[] = useMemo(() => {
     return filteredVenues.map(v => ({
@@ -562,6 +652,68 @@ export default function ExplorePage() {
             </button>
           ))}
         </div>
+
+        {/* District Filter */}
+        <div className="flex items-center gap-2 mb-6">
+          <MapPin className="h-4 w-4 text-muted-foreground" />
+          <span className="text-sm text-muted-foreground">İlçe:</span>
+          <select
+            value={selectedDistrict}
+            onChange={(e) => setSelectedDistrict(e.target.value)}
+            className="text-sm border rounded-lg px-3 py-1.5 bg-background"
+          >
+            {DISTRICTS.map((district) => (
+              <option key={district.id} value={district.id}>
+                {district.name}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* Weekly Popular Section */}
+        {showWeeklyPopular && !searchQuery && !selectedCategory && (
+          <div className="mb-8">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-bold flex items-center gap-2">
+                <Flame className="h-5 w-5 text-orange-500" />
+                Haftanın Popüler Lezzetleri
+              </h2>
+              <button
+                onClick={() => setShowWeeklyPopular(false)}
+                className="text-sm text-muted-foreground hover:text-foreground flex items-center gap-1"
+              >
+                Gizle
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-hide">
+              {WEEKLY_POPULAR.map((item) => (
+                <Link
+                  key={item.id}
+                  href={`/venues/${item.venueSlug}`}
+                  className="flex-shrink-0 w-56 bg-gradient-to-br from-orange-50 to-red-50 border border-orange-200 rounded-xl p-4 hover:shadow-md transition-shadow"
+                >
+                  <div className="flex items-start justify-between mb-2">
+                    <span className="text-3xl">{item.icon}</span>
+                    <span className="text-xs font-medium text-green-600 bg-green-100 px-2 py-1 rounded-full flex items-center gap-1">
+                      <TrendingUp className="h-3 w-3" />
+                      {item.trend}
+                    </span>
+                  </div>
+                  <h3 className="font-semibold line-clamp-1">{item.name}</h3>
+                  <p className="text-sm text-muted-foreground line-clamp-1">{item.venueName}</p>
+                  <div className="flex items-center gap-2 mt-2 text-sm">
+                    <div className="flex items-center gap-1">
+                      <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
+                      <span className="font-medium">{item.rating}</span>
+                    </div>
+                    <span className="text-muted-foreground">({item.reviewCount})</span>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Results count */}
         <div className="flex items-center justify-between mb-4">

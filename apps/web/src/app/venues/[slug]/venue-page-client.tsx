@@ -7,7 +7,7 @@ import dynamic from 'next/dynamic';
 import { useParams } from 'next/navigation';
 import { 
   MapPin, Star, Clock, Phone, Globe, Heart, Share2, 
-  ChevronLeft, Loader2, Navigation, Utensils, MessageSquarePlus, Send, X
+  ChevronLeft, Loader2, Navigation, Utensils, MessageSquarePlus, Send, X, Camera, ImagePlus
 } from 'lucide-react';
 import { useAuthStore } from '@/stores/auth-store';
 import { toast } from 'sonner';
@@ -61,6 +61,7 @@ interface Review {
   createdAt: string;
   user: { displayName: string; avatarUrl?: string };
   likeCount: number;
+  photos?: string[]; // Base64 or URLs
 }
 
 // Demo venue database with full details
@@ -576,6 +577,7 @@ export default function VenueDetailPage() {
   const [showReviewForm, setShowReviewForm] = useState(false);
   const [reviewRating, setReviewRating] = useState(0);
   const [reviewComment, setReviewComment] = useState('');
+  const [reviewPhotos, setReviewPhotos] = useState<string[]>([]);
   const [hoverRating, setHoverRating] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
   
@@ -583,6 +585,7 @@ export default function VenueDetailPage() {
   const [reviewingItem, setReviewingItem] = useState<MenuItem | null>(null);
   const [itemRating, setItemRating] = useState(0);
   const [itemComment, setItemComment] = useState('');
+  const [itemPhotos, setItemPhotos] = useState<string[]>([]);
   const [itemHoverRating, setItemHoverRating] = useState(0);
   
   // Get user info
@@ -613,6 +616,46 @@ export default function VenueDetailPage() {
     setIsLoading(false);
   };
 
+  // Photo upload handler
+  const handlePhotoUpload = (
+    e: React.ChangeEvent<HTMLInputElement>,
+    setPhotos: React.Dispatch<React.SetStateAction<string[]>>
+  ) => {
+    const files = e.target.files;
+    if (!files) return;
+
+    const maxPhotos = 5;
+    const maxSize = 5 * 1024 * 1024; // 5MB
+
+    Array.from(files).forEach((file) => {
+      if (file.size > maxSize) {
+        toast.error('Fotoğraf boyutu 5MB\'dan küçük olmalı');
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const result = e.target?.result as string;
+        setPhotos((prev) => {
+          if (prev.length >= maxPhotos) {
+            toast.error(`Maksimum ${maxPhotos} fotoğraf yükleyebilirsiniz`);
+            return prev;
+          }
+          return [...prev, result];
+        });
+      };
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const removePhoto = (
+    index: number,
+    photos: string[],
+    setPhotos: React.Dispatch<React.SetStateAction<string[]>>
+  ) => {
+    setPhotos(photos.filter((_, i) => i !== index));
+  };
+
   const handleSubmitVenueReview = async () => {
     if (!isAuthenticated) {
       toast.error('Değerlendirme yapmak için giriş yapın');
@@ -631,6 +674,7 @@ export default function VenueDetailPage() {
       id: `user_${Date.now()}`,
       overallRating: reviewRating,
       comment: reviewComment.trim() || undefined,
+      photos: reviewPhotos.length > 0 ? reviewPhotos : undefined,
       createdAt: new Date().toISOString().split('T')[0],
       user: { displayName: user?.displayName || 'Anonim Kullanıcı' },
       likeCount: 0,
@@ -647,6 +691,7 @@ export default function VenueDetailPage() {
     setReviews(prev => [newReview, ...prev]);
     setReviewRating(0);
     setReviewComment('');
+    setReviewPhotos([]);
     setShowReviewForm(false);
     setIsSubmitting(false);
     
@@ -673,6 +718,7 @@ export default function VenueDetailPage() {
       itemName: reviewingItem.name,
       rating: itemRating,
       comment: itemComment.trim() || undefined,
+      photos: itemPhotos.length > 0 ? itemPhotos : undefined,
       createdAt: new Date().toISOString().split('T')[0],
       user: user?.displayName || 'Anonim Kullanıcı',
     };
@@ -687,6 +733,7 @@ export default function VenueDetailPage() {
     // Reset form
     setItemRating(0);
     setItemComment('');
+    setItemPhotos([]);
     setReviewingItem(null);
     setIsSubmitting(false);
     
@@ -1029,6 +1076,38 @@ export default function VenueDetailPage() {
                     className="w-full p-3 border rounded-lg resize-none h-24 focus:outline-none focus:ring-2 focus:ring-primary/50"
                   />
                 </div>
+
+                {/* Photo Upload */}
+                <div className="mb-4">
+                  <p className="text-sm text-muted-foreground mb-2">Fotoğraf Ekle (opsiyonel, maks. 5)</p>
+                  <div className="flex flex-wrap gap-2">
+                    {reviewPhotos.map((photo, index) => (
+                      <div key={index} className="relative w-20 h-20 rounded-lg overflow-hidden group">
+                        <img src={photo} alt={`Fotoğraf ${index + 1}`} className="w-full h-full object-cover" />
+                        <button
+                          type="button"
+                          onClick={() => removePhoto(index, reviewPhotos, setReviewPhotos)}
+                          className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity"
+                        >
+                          <X className="h-5 w-5 text-white" />
+                        </button>
+                      </div>
+                    ))}
+                    {reviewPhotos.length < 5 && (
+                      <label className="w-20 h-20 border-2 border-dashed rounded-lg flex flex-col items-center justify-center cursor-pointer hover:border-primary hover:bg-primary/5 transition-colors">
+                        <Camera className="h-5 w-5 text-muted-foreground" />
+                        <span className="text-xs text-muted-foreground mt-1">Ekle</span>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          multiple
+                          className="hidden"
+                          onChange={(e) => handlePhotoUpload(e, setReviewPhotos)}
+                        />
+                      </label>
+                    )}
+                  </div>
+                </div>
                 
                 {/* Submit Button */}
                 <button
@@ -1096,6 +1175,21 @@ export default function VenueDetailPage() {
                         
                         {review.comment && (
                           <p className="text-muted-foreground leading-relaxed">{review.comment}</p>
+                        )}
+
+                        {/* Review Photos */}
+                        {review.photos && review.photos.length > 0 && (
+                          <div className="flex gap-2 mt-3 overflow-x-auto">
+                            {review.photos.map((photo, index) => (
+                              <div key={index} className="flex-shrink-0 w-24 h-24 rounded-lg overflow-hidden">
+                                <img
+                                  src={photo}
+                                  alt={`Değerlendirme fotoğrafı ${index + 1}`}
+                                  className="w-full h-full object-cover"
+                                />
+                              </div>
+                            ))}
+                          </div>
                         )}
                         
                         <div className="flex items-center gap-4 mt-3 text-sm text-muted-foreground">
@@ -1206,6 +1300,7 @@ export default function VenueDetailPage() {
                   setReviewingItem(null);
                   setItemRating(0);
                   setItemComment('');
+                  setItemPhotos([]);
                 }}
                 className="p-1 hover:bg-muted rounded-full"
               >
@@ -1263,6 +1358,37 @@ export default function VenueDetailPage() {
                 placeholder="Bu ürün hakkında ne düşündünüz?"
                 className="w-full p-3 border rounded-lg resize-none h-24 focus:outline-none focus:ring-2 focus:ring-primary/50"
               />
+            </div>
+
+            {/* Photo Upload */}
+            <div className="mb-4">
+              <p className="text-sm text-muted-foreground mb-2">Fotoğraf Ekle (opsiyonel)</p>
+              <div className="flex flex-wrap gap-2">
+                {itemPhotos.map((photo, index) => (
+                  <div key={index} className="relative w-16 h-16 rounded-lg overflow-hidden group">
+                    <img src={photo} alt={`Fotoğraf ${index + 1}`} className="w-full h-full object-cover" />
+                    <button
+                      type="button"
+                      onClick={() => removePhoto(index, itemPhotos, setItemPhotos)}
+                      className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity"
+                    >
+                      <X className="h-4 w-4 text-white" />
+                    </button>
+                  </div>
+                ))}
+                {itemPhotos.length < 3 && (
+                  <label className="w-16 h-16 border-2 border-dashed rounded-lg flex flex-col items-center justify-center cursor-pointer hover:border-primary hover:bg-primary/5 transition-colors">
+                    <Camera className="h-4 w-4 text-muted-foreground" />
+                    <input
+                      type="file"
+                      accept="image/*"
+                      multiple
+                      className="hidden"
+                      onChange={(e) => handlePhotoUpload(e, setItemPhotos)}
+                    />
+                  </label>
+                )}
+              </div>
             </div>
             
             {/* Submit Button */}

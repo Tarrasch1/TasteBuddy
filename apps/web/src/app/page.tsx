@@ -1,8 +1,31 @@
+'use client';
+
+import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { MapPin, Star, Users, Utensils } from 'lucide-react';
 import { Header } from '@/components/header';
+import { useAuthStore } from '@/lib/auth-store';
 
 export default function HomePage() {
+  const router = useRouter();
+  const { isAuthenticated, hasHydrated } = useAuthStore();
+
+  useEffect(() => {
+    if (hasHydrated && isAuthenticated) {
+      router.push('/feed');
+    }
+  }, [hasHydrated, isAuthenticated, router]);
+
+  // Show loading while hydrating or redirecting
+  if (!hasHydrated || isAuthenticated) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen flex flex-col">
       {/* Header */}
