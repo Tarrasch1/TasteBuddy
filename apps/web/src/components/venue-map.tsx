@@ -83,7 +83,13 @@ interface VenueMapProps {
 function ChangeView({ center, zoom }: { center: [number, number]; zoom: number }) {
   const map = useMap();
   useEffect(() => {
-    map.setView(center, zoom);
+    try {
+      if (center[0] && center[1] && !isNaN(center[0]) && !isNaN(center[1])) {
+        map.setView(center, zoom);
+      }
+    } catch (error) {
+      console.warn('Failed to set view:', error);
+    }
   }, [center, zoom, map]);
   return null;
 }
@@ -95,13 +101,22 @@ function FitBounds({ venues, userLocation }: { venues: MapVenue[]; userLocation?
   useEffect(() => {
     if (venues.length === 0 && !userLocation) return;
     
-    const bounds: [number, number][] = venues.map(v => [v.latitude, v.longitude]);
-    if (userLocation) {
+    // Filter valid coordinates
+    const bounds: [number, number][] = venues
+      .filter(v => v.latitude && v.longitude && !isNaN(v.latitude) && !isNaN(v.longitude))
+      .map(v => [v.latitude, v.longitude]);
+    
+    if (userLocation && userLocation.lat && userLocation.lng && 
+        !isNaN(userLocation.lat) && !isNaN(userLocation.lng)) {
       bounds.push([userLocation.lat, userLocation.lng]);
     }
     
     if (bounds.length > 0) {
-      map.fitBounds(bounds, { padding: [50, 50], maxZoom: 15 });
+      try {
+        map.fitBounds(bounds, { padding: [50, 50], maxZoom: 15 });
+      } catch (error) {
+        console.warn('Failed to fit bounds:', error);
+      }
     }
   }, [venues, userLocation, map]);
   
@@ -140,6 +155,29 @@ export default function VenueMap({
     setIsMounted(true);
   }, []);
 
+  // Filter out venues with invalid coordinates
+  const validVenues = venues.filter(v => 
+    v.latitude && v.longitude && 
+    !isNaN(v.latitude) && !isNaN(v.longitude) &&
+    v.latitude >= -90 && v.latitude <= 90 &&
+    v.longitude >= -180 && v.longitude <= 180
+  );
+
+  // Validate user location
+  const validUserLocation = userLocation && 
+    userLocation.lat && userLocation.lng &&
+    !isNaN(userLocation.lat) && !isNaN(userLocation.lng) &&
+    userLocation.lat >= -90 && userLocation.lat <= 90 &&
+    userLocation.lng >= -180 && userLocation.lng <= 180
+    ? userLocation : null;
+
+  // Calculate center from valid data
+  const mapCenter: [number, number] = validUserLocation 
+    ? [validUserLocation.lat, validUserLocation.lng] 
+    : validVenues.length > 0 
+      ? [validVenues[0].latitude, validVenues[0].longitude]
+      : center;
+
   if (!isMounted) {
     return (
       <div className={`${className} bg-muted rounded-xl flex items-center justify-center`}>
@@ -151,7 +189,8 @@ export default function VenueMap({
   return (
     <div className={`${className} rounded-xl overflow-hidden border`}>
       <MapContainer
-        center={userLocation ? [userLocation.lat, userLocation.lng] : center}
+        key={`map-${mapCenter[0]}-${mapCenter[1]}`}
+        center={mapCenter}
         zoom={zoom}
         className="h-full w-full"
         zoomControl={true}
@@ -161,13 +200,13 @@ export default function VenueMap({
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
         
-        <FitBounds venues={venues} userLocation={userLocation} />
+        <FitBounds venues={validVenues} userLocation={validUserLocation} />
         
         {/* User location marker */}
-        {userLocation && (
+        {validUserLocation && (
           <>
             <Marker 
-              position={[userLocation.lat, userLocation.lng]} 
+              position={[validUserLocation.lat, validUserLocation.lng]} 
               icon={UserLocationIcon}
             >
               <Popup>
@@ -177,7 +216,7 @@ export default function VenueMap({
               </Popup>
             </Marker>
             <Circle
-              center={[userLocation.lat, userLocation.lng]}
+              center={[validUserLocation.lat, validUserLocation.lng]}
               radius={100}
               pathOptions={{
                 color: '#3b82f6',
@@ -189,7 +228,7 @@ export default function VenueMap({
         )}
         
         {/* Venue markers */}
-        {venues.map((venue) => (
+        {validVenues.map((venue) => (
           <Marker
             key={venue.id}
             position={[venue.latitude, venue.longitude]}
