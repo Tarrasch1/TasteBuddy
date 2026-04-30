@@ -71,16 +71,6 @@ function getDemoVenues(location: LocationCoords): TransformedVenue[] {
   }).sort((a, b) => (a.distance || 0) - (b.distance || 0));
 }
 
-// Dynamic import for Map
-const VenueMap = dynamic(() => import('@/components/venue-map'), {
-  ssr: false,
-  loading: () => (
-    <div className="h-[400px] bg-muted rounded-xl flex items-center justify-center">
-      <Loader2 className="h-6 w-6 animate-spin text-primary" />
-    </div>
-  ),
-});
-
 export default function NearbyPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSearching, setIsSearching] = useState(false);
