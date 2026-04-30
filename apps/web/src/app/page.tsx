@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { MapPin, Star, Users, Utensils } from 'lucide-react';
 import { Header } from '@/components/header';
-import { useAuthStore } from '@/lib/auth-store';
+import { useAuthStore } from '@/stores/auth-store';
 
 export default function HomePage() {
   const router = useRouter();
