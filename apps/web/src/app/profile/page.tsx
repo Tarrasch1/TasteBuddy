@@ -2,13 +2,14 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 import { formatDistanceToNow } from 'date-fns';
 import { tr } from 'date-fns/locale';
 import {
   Utensils, MapPin, Star, Heart, Settings, LogOut, User,
   Loader2, Award, Calendar, Edit2, Share2, ChevronRight,
-  Filter, Camera, MessageCircle, TrendingUp
+  Filter, Camera, MessageCircle, TrendingUp, Map
 } from 'lucide-react';
 import { useAuthStore } from '@/stores/auth-store';
 import { toast } from 'sonner';
@@ -18,6 +19,16 @@ import {
   getCategoryName, getCategoryIcon, calculateTotalPoints, getUserLevel,
   type Badge, type UserBadge, type BadgeCategory
 } from '@/lib/badges';
+
+// Dynamic import for Map to avoid SSR issues
+const ProfileMap = dynamic(() => import('@/components/profile-map'), {
+  ssr: false,
+  loading: () => (
+    <div className="h-[400px] bg-muted rounded-xl flex items-center justify-center">
+      <Loader2 className="h-6 w-6 animate-spin text-primary" />
+    </div>
+  ),
+});
 
 // Demo user stats
 const DEMO_USER_STATS = {
@@ -30,12 +41,13 @@ const DEMO_USER_STATS = {
   joinDate: '2024-01-15',
 };
 
-// Demo reviews for profile
+// Demo reviews for profile with coordinates
 const DEMO_USER_REVIEWS = [
   {
     id: '1',
     type: 'venue',
     venueName: 'Karadeniz Pide Salonu',
+    venueSlug: 'karadeniz-pide-salonu',
     itemName: null,
     rating: 5,
     comment: 'En iyi pide burada! Kuşbaşılı kaşarlı pide muhteşem. Hamuru ince ve çıtır, malzemeler taze.',
@@ -44,11 +56,14 @@ const DEMO_USER_REVIEWS = [
     createdAt: '2024-04-10T14:30:00Z',
     likes: 24,
     comments: 5,
+    latitude: 41.0082,
+    longitude: 28.9784,
   },
   {
     id: '2',
     type: 'item',
     venueName: 'Tadım Lahmacun',
+    venueSlug: 'tadim-lahmacun',
     itemName: 'Lahmacun',
     rating: 4,
     comment: 'Çok lezzetli ve ince hamurlu. Acısı tam kıvamında.',
@@ -57,11 +72,14 @@ const DEMO_USER_REVIEWS = [
     createdAt: '2024-04-08T19:15:00Z',
     likes: 12,
     comments: 2,
+    latitude: 41.0370,
+    longitude: 28.9850,
   },
   {
     id: '3',
     type: 'venue',
     venueName: 'Mandabatmaz',
+    venueSlug: 'mandabatmaz',
     itemName: null,
     rating: 5,
     comment: 'İstanbul\'un en iyi Türk kahvesi. Köpük kıvamı mükemmel!',
@@ -70,11 +88,14 @@ const DEMO_USER_REVIEWS = [
     createdAt: '2024-04-05T10:00:00Z',
     likes: 45,
     comments: 8,
+    latitude: 41.0316,
+    longitude: 28.9747,
   },
   {
     id: '4',
     type: 'item',
     venueName: 'Baylan Pastanesi',
+    venueSlug: 'baylan-pastanesi',
     itemName: 'Kup Griye',
     rating: 5,
     comment: 'Efsanevi tatlı! Mutlaka denenmeli.',
@@ -83,11 +104,14 @@ const DEMO_USER_REVIEWS = [
     createdAt: '2024-04-02T16:45:00Z',
     likes: 38,
     comments: 6,
+    latitude: 40.9903,
+    longitude: 29.0293,
   },
   {
     id: '5',
     type: 'venue',
     venueName: 'Sultanahmet Köftecisi',
+    venueSlug: 'sultanahmet-koftecisi',
     itemName: null,
     rating: 4,
     comment: 'Klasik köfte, piyaz, ekmek üçlüsü. Kuyruk olsa da beklemeye değer.',
@@ -96,6 +120,72 @@ const DEMO_USER_REVIEWS = [
     createdAt: '2024-03-28T13:00:00Z',
     likes: 18,
     comments: 3,
+    latitude: 41.0054,
+    longitude: 28.9768,
+  },
+  {
+    id: '6',
+    type: 'venue',
+    venueName: 'Karaköy Güllüoğlu',
+    venueSlug: 'karakoy-gulluoglu',
+    itemName: null,
+    rating: 5,
+    comment: 'Baklava için en iyi adres! Fıstıklı baklava efsane.',
+    category: 'dessert',
+    photoUrl: null,
+    createdAt: '2024-03-20T15:30:00Z',
+    likes: 56,
+    comments: 12,
+    latitude: 41.0226,
+    longitude: 28.9774,
+  },
+  {
+    id: '7',
+    type: 'venue',
+    venueName: 'Burger King Taksim',
+    venueSlug: 'burger-king-taksim',
+    itemName: null,
+    rating: 2,
+    comment: 'Çok kalabalıktı, sipariş geç geldi. Normal fast food.',
+    category: 'fast-food',
+    photoUrl: null,
+    createdAt: '2024-03-15T20:00:00Z',
+    likes: 3,
+    comments: 1,
+    latitude: 41.0370,
+    longitude: 28.9850,
+  },
+  {
+    id: '8',
+    type: 'venue',
+    venueName: 'Çiya Sofrası',
+    venueSlug: 'ciya-sofrasi',
+    itemName: null,
+    rating: 5,
+    comment: 'Anadolu mutfağının en iyisi! Her şey taze ve lezzetli.',
+    category: 'turkish',
+    photoUrl: null,
+    createdAt: '2024-03-10T13:00:00Z',
+    likes: 72,
+    comments: 15,
+    latitude: 40.9903,
+    longitude: 29.0293,
+  },
+  {
+    id: '9',
+    type: 'venue',
+    venueName: 'Orta Dünya Kahve',
+    venueSlug: 'orta-dunya-kahve',
+    itemName: null,
+    rating: 3,
+    comment: 'Kahve fena değil ama fiyatlar biraz yüksek.',
+    category: 'cafe',
+    photoUrl: null,
+    createdAt: '2024-03-05T11:00:00Z',
+    likes: 8,
+    comments: 2,
+    latitude: 41.0478,
+    longitude: 29.0095,
   },
 ];
 
@@ -106,7 +196,7 @@ export default function ProfilePage() {
   const router = useRouter();
   const { user, isAuthenticated, logout, hasHydrated } = useAuthStore();
   const [isLoading, setIsLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'reviews' | 'badges' | 'saved'>('reviews');
+  const [activeTab, setActiveTab] = useState<'reviews' | 'badges' | 'saved' | 'map'>('reviews');
   const [reviewFilter, setReviewFilter] = useState<ReviewFilter>('all');
   const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>('all');
   const [showBadgeModal, setShowBadgeModal] = useState<Badge | null>(null);
@@ -335,6 +425,19 @@ export default function ProfilePage() {
             Değerlendirmeler
           </button>
           <button
+            onClick={() => setActiveTab('map')}
+            className={`flex-1 py-3 text-center font-medium transition-colors ${
+              activeTab === 'map'
+                ? 'text-primary border-b-2 border-primary'
+                : 'text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            <span className="flex items-center justify-center gap-1">
+              <Map className="h-4 w-4" />
+              Harita
+            </span>
+          </button>
+          <button
             onClick={() => setActiveTab('badges')}
             className={`flex-1 py-3 text-center font-medium transition-colors ${
               activeTab === 'badges'
@@ -531,6 +634,93 @@ export default function ProfilePage() {
                     </button>
                   );
                 })}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'map' && (
+          <div className="space-y-4">
+            {/* Map Legend */}
+            <div className="bg-card border rounded-xl p-4">
+              <h3 className="font-semibold mb-3 flex items-center gap-2">
+                <MapPin className="h-5 w-5 text-primary" />
+                Değerlendirme Haritası
+              </h3>
+              <div className="flex flex-wrap gap-4 text-sm">
+                <div className="flex items-center gap-2">
+                  <div className="w-4 h-4 rounded-full bg-green-500"></div>
+                  <span>Yüksek Puan (4-5)</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-4 h-4 rounded-full bg-yellow-500"></div>
+                  <span>Orta Puan (3-3.9)</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-4 h-4 rounded-full bg-red-500"></div>
+                  <span>Düşük Puan (1-2.9)</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Map */}
+            <div className="rounded-xl overflow-hidden border">
+              <ProfileMap reviews={DEMO_USER_REVIEWS} />
+            </div>
+
+            {/* Stats */}
+            <div className="grid grid-cols-3 gap-4">
+              <div className="bg-card border rounded-xl p-4 text-center">
+                <p className="text-2xl font-bold text-green-500">
+                  {DEMO_USER_REVIEWS.filter(r => r.rating >= 4).length}
+                </p>
+                <p className="text-sm text-muted-foreground">Yüksek Puan</p>
+              </div>
+              <div className="bg-card border rounded-xl p-4 text-center">
+                <p className="text-2xl font-bold text-yellow-500">
+                  {DEMO_USER_REVIEWS.filter(r => r.rating >= 3 && r.rating < 4).length}
+                </p>
+                <p className="text-sm text-muted-foreground">Orta Puan</p>
+              </div>
+              <div className="bg-card border rounded-xl p-4 text-center">
+                <p className="text-2xl font-bold text-red-500">
+                  {DEMO_USER_REVIEWS.filter(r => r.rating < 3).length}
+                </p>
+                <p className="text-sm text-muted-foreground">Düşük Puan</p>
+              </div>
+            </div>
+
+            {/* Location List */}
+            <div className="bg-card border rounded-xl p-4">
+              <h3 className="font-semibold mb-3">Ziyaret Edilen Mekanlar</h3>
+              <div className="space-y-2 max-h-64 overflow-y-auto">
+                {DEMO_USER_REVIEWS.map((review) => (
+                  <Link
+                    key={review.id}
+                    href={`/venues/${review.venueSlug}`}
+                    className="flex items-center justify-between p-2 rounded-lg hover:bg-muted transition-colors"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className={`w-3 h-3 rounded-full ${
+                        review.rating >= 4 ? 'bg-green-500' :
+                        review.rating >= 3 ? 'bg-yellow-500' : 'bg-red-500'
+                      }`}></div>
+                      <div>
+                        <p className="font-medium text-sm">{review.venueName}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {new Date(review.createdAt).toLocaleDateString('tr-TR')}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <Star className={`h-4 w-4 ${
+                        review.rating >= 4 ? 'fill-green-500 text-green-500' :
+                        review.rating >= 3 ? 'fill-yellow-500 text-yellow-500' : 'fill-red-500 text-red-500'
+                      }`} />
+                      <span className="text-sm font-medium">{review.rating}</span>
+                    </div>
+                  </Link>
+                ))}
               </div>
             </div>
           </div>
