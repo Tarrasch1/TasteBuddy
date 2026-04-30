@@ -5,7 +5,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
-import { Search, MapPin, Star, Loader2, Map, List, Navigation, User, LogOut, Settings, Bookmark, Bell, X, TrendingUp, ChevronRight, Flame } from 'lucide-react';
+import { Search, MapPin, Star, Loader2, Map, List, Navigation, User, LogOut, Settings, Bookmark, Bell, X, TrendingUp, ChevronRight, Flame, Sparkles, Heart, ThumbsUp } from 'lucide-react';
 import { useAuthStore } from '@/stores/auth-store';
 import { useDebounce } from '@/hooks/use-debounce';
 import type { MapVenue } from '@/components/venue-map';
@@ -357,6 +357,106 @@ const WEEKLY_POPULAR = [
   },
 ];
 
+// Kullanıcının geçmiş değerlendirmelerine dayalı tercihler (Demo)
+const USER_PREFERENCES = {
+  favoriteCategories: ['Türk Mutfağı', 'Kafe', 'Tatlıcı'], // En çok değerlendirilen kategoriler
+  avgRating: 4.2, // Ortalama verilen puan
+  pricePreference: [2, 3], // Tercih edilen fiyat aralığı
+  frequentAreas: ['Beyoğlu', 'Kadıköy', 'Beşiktaş'], // Sık gittiği bölgeler
+  recentHighRatings: ['pide', 'kebab', 'kahve', 'baklava'], // Yüksek puan verdiği yemekler
+};
+
+// Sana Uygun Öneriler (kullanıcı tercihlerine dayalı)
+const FOR_YOU_RECOMMENDATIONS = [
+  {
+    id: 'fy1',
+    type: 'venue' as const,
+    name: 'Karadeniz Pide Salonu',
+    slug: 'karadeniz-pide-salonu',
+    description: 'Pide sevgini biliyoruz! Bu mekân tam sana göre.',
+    reason: 'Pide kategorisinde yüksek puanlar verdin',
+    rating: 4.9,
+    reviewCount: 456,
+    priceLevel: 2,
+    category: { name: 'Türk Mutfağı', icon: '🥟' },
+    matchScore: 98,
+    photo: null,
+  },
+  {
+    id: 'fy2',
+    type: 'item' as const,
+    name: 'Türk Kahvesi',
+    venueName: 'Mandabatmaz',
+    slug: 'mandabatmaz',
+    description: 'Kahve tutkunları buraya! Köpüğüyle ünlü.',
+    reason: 'Kafe kategorisini çok seviyorsun',
+    rating: 4.8,
+    reviewCount: 892,
+    priceLevel: 1,
+    category: { name: 'Kafe', icon: '☕' },
+    matchScore: 95,
+    photo: null,
+  },
+  {
+    id: 'fy3',
+    type: 'item' as const,
+    name: 'Burma Kadayıf',
+    venueName: 'Karaköy Güllüoğlu',
+    slug: 'karakoy-gulluoglu',
+    description: 'Tatlı severlere özel! Efsane lezzet.',
+    reason: 'Tatlı kategorisinde 5 yıldız vermiştin',
+    rating: 4.9,
+    reviewCount: 2341,
+    priceLevel: 2,
+    category: { name: 'Tatlıcı', icon: '🍯' },
+    matchScore: 94,
+    photo: null,
+  },
+  {
+    id: 'fy4',
+    type: 'venue' as const,
+    name: 'Çiya Sofrası',
+    slug: 'ciya-sofrasi',
+    description: 'Anadolu lezzetleri senin için!',
+    reason: 'Türk Mutfağı favorin olmuş',
+    rating: 4.7,
+    reviewCount: 3210,
+    priceLevel: 2,
+    category: { name: 'Türk Mutfağı', icon: '🍲' },
+    matchScore: 92,
+    photo: null,
+  },
+  {
+    id: 'fy5',
+    type: 'item' as const,
+    name: 'V60 Filtre Kahve',
+    venueName: 'Kronotrop Coffee',
+    slug: 'kronotrop-coffee',
+    description: 'Filtre kahve keyfi burada bambaşka!',
+    reason: 'Kronotrop\'a benzer mekânları beğendin',
+    rating: 4.6,
+    reviewCount: 1820,
+    priceLevel: 2,
+    category: { name: 'Kafe', icon: '☕' },
+    matchScore: 90,
+    photo: null,
+  },
+  {
+    id: 'fy6',
+    type: 'venue' as const,
+    name: 'Köfteci Yusuf',
+    slug: 'kofteci-yusuf-eminonu',
+    description: 'Klasik köfte severlere! Hızlı ve lezzetli.',
+    reason: 'Kebap & köfte değerlendirmelerin yüksek',
+    rating: 4.2,
+    reviewCount: 4120,
+    priceLevel: 1,
+    category: { name: 'Türk Mutfağı', icon: '🍖' },
+    matchScore: 88,
+    photo: null,
+  },
+];
+
 export default function ExplorePage() {
   const router = useRouter();
   const { isAuthenticated, user, hasHydrated, logout } = useAuthStore();
@@ -371,6 +471,7 @@ export default function ExplorePage() {
   const [selectedVenue, setSelectedVenue] = useState<Venue | null>(null);
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showWeeklyPopular, setShowWeeklyPopular] = useState(true);
+  const [showForYou, setShowForYou] = useState(true);
   const menuRef = useRef<HTMLDivElement>(null);
   
   // Debounce search query for better performance (150ms delay)
@@ -669,6 +770,97 @@ export default function ExplorePage() {
             ))}
           </select>
         </div>
+
+        {/* For You - Personalized Recommendations */}
+        {isAuthenticated && showForYou && !searchQuery && !selectedCategory && (
+          <div className="mb-8">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h2 className="text-lg font-bold flex items-center gap-2">
+                  <Sparkles className="h-5 w-5 text-purple-500" />
+                  Sana Uygun
+                </h2>
+                <p className="text-sm text-muted-foreground mt-0.5">
+                  Değerlendirmelerine göre özel öneriler
+                </p>
+              </div>
+              <button
+                onClick={() => setShowForYou(false)}
+                className="text-sm text-muted-foreground hover:text-foreground flex items-center gap-1"
+              >
+                Gizle
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            
+            {/* User taste summary */}
+            <div className="mb-4 bg-gradient-to-r from-purple-50 to-pink-50 border border-purple-200 rounded-xl p-4">
+              <div className="flex items-center gap-3 mb-3">
+                <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center">
+                  <ThumbsUp className="h-5 w-5 text-purple-600" />
+                </div>
+                <div>
+                  <p className="font-medium text-purple-900">Senin Damak Profili</p>
+                  <p className="text-sm text-purple-700">47 değerlendirme, 35 farklı mekan</p>
+                </div>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {USER_PREFERENCES.favoriteCategories.map((cat, idx) => (
+                  <span
+                    key={idx}
+                    className="text-xs font-medium bg-white/80 text-purple-700 px-3 py-1.5 rounded-full border border-purple-200 flex items-center gap-1"
+                  >
+                    <Heart className="h-3 w-3 fill-purple-400 text-purple-400" />
+                    {cat}
+                  </span>
+                ))}
+                <span className="text-xs font-medium bg-white/80 text-purple-700 px-3 py-1.5 rounded-full border border-purple-200">
+                  Ort. {USER_PREFERENCES.avgRating}★
+                </span>
+              </div>
+            </div>
+
+            {/* Recommendation cards */}
+            <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-hide">
+              {FOR_YOU_RECOMMENDATIONS.map((item) => (
+                <Link
+                  key={item.id}
+                  href={`/venues/${item.slug}`}
+                  className="flex-shrink-0 w-72 bg-gradient-to-br from-purple-50 via-white to-pink-50 border border-purple-200 rounded-xl p-4 hover:shadow-lg transition-all hover:scale-[1.02]"
+                >
+                  <div className="flex items-start justify-between mb-3">
+                    <span className="text-3xl">{item.category.icon}</span>
+                    <span className="text-xs font-bold text-purple-600 bg-purple-100 px-2.5 py-1 rounded-full flex items-center gap-1">
+                      <Sparkles className="h-3 w-3" />
+                      %{item.matchScore} uyum
+                    </span>
+                  </div>
+                  <h3 className="font-semibold text-gray-900">{item.name}</h3>
+                  {'venueName' in item && item.venueName && (
+                    <p className="text-sm text-muted-foreground">{item.venueName}</p>
+                  )}
+                  <p className="text-sm text-purple-700 mt-2 line-clamp-2 italic">
+                    &quot;{item.description}&quot;
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-2 flex items-center gap-1">
+                    <ThumbsUp className="h-3 w-3" />
+                    {item.reason}
+                  </p>
+                  <div className="flex items-center justify-between mt-3 pt-3 border-t border-purple-100">
+                    <div className="flex items-center gap-1">
+                      <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
+                      <span className="font-medium">{item.rating}</span>
+                      <span className="text-muted-foreground text-sm">({item.reviewCount})</span>
+                    </div>
+                    <span className="text-xs text-muted-foreground">
+                      {'₺'.repeat(item.priceLevel)}
+                    </span>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Weekly Popular Section */}
         {showWeeklyPopular && !searchQuery && !selectedCategory && (
