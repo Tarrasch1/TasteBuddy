@@ -14,7 +14,7 @@ import { useAuthStore } from '@/stores/auth-store';
 import { toast } from 'sonner';
 import { formatDistanceToNow } from 'date-fns';
 import { tr } from 'date-fns/locale';
-import AddReviewModal from '@/components/add-review-modal';
+import AddReviewModal, { type NewReviewData } from '@/components/add-review-modal';
 
 interface FeedItem {
   id: string;
@@ -357,6 +357,44 @@ export default function FeedPage() {
     setCommentText('');
     setCommentingOn(null);
     toast.success('Yorum eklendi!');
+  };
+
+  const handleNewReview = (reviewData: NewReviewData) => {
+    const newFeedItem: FeedItem = {
+      id: reviewData.id,
+      type: reviewData.type === 'item' ? 'item_review' : 'venue_review',
+      user: {
+        id: user?.id || 'current',
+        displayName: reviewData.user,
+        username: user?.username || 'user',
+        avatarUrl: user?.avatarUrl,
+        isVerified: false,
+      },
+      createdAt: reviewData.createdAt,
+      venue: {
+        id: reviewData.venueId,
+        name: reviewData.venueName,
+        slug: reviewData.venueSlug,
+        category: reviewData.venueCategory.name,
+        address: reviewData.venueAddress,
+      },
+      item: reviewData.type === 'item' && reviewData.itemName ? {
+        id: `item_${Date.now()}`,
+        name: reviewData.itemName,
+        category: reviewData.venueCategory.name,
+      } : undefined,
+      rating: reviewData.rating,
+      content: reviewData.comment || undefined,
+      photos: reviewData.photos || undefined,
+      likeCount: 0,
+      commentCount: 0,
+      isLiked: false,
+      isSaved: false,
+      comments: [],
+    };
+
+    setFeedItems(prev => [newFeedItem, ...prev]);
+    setShowAddReview(false);
   };
 
   const toggleComments = (itemId: string) => {
@@ -766,7 +804,8 @@ export default function FeedPage() {
       {/* Add Review Modal */}
       <AddReviewModal 
         isOpen={showAddReview} 
-        onClose={() => setShowAddReview(false)} 
+        onClose={() => setShowAddReview(false)}
+        onSuccess={handleNewReview}
       />
 
       {/* Mobile Bottom Navigation */}

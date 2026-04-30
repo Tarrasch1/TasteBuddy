@@ -15,9 +15,26 @@ interface Venue {
   category: { name: string; icon: string };
 }
 
+export interface NewReviewData {
+  id: string;
+  venueId: string;
+  venueName: string;
+  venueSlug: string;
+  venueCategory: { name: string; icon: string };
+  venueAddress: string;
+  type: 'venue' | 'item';
+  itemName: string | null;
+  rating: number;
+  comment: string | null;
+  photos: string[] | null;
+  createdAt: string;
+  user: string;
+}
+
 interface AddReviewModalProps {
   isOpen: boolean;
   onClose: () => void;
+  onSuccess?: (review: NewReviewData) => void;
 }
 
 // Demo venues for search
@@ -36,7 +53,7 @@ const SEARCHABLE_VENUES: Venue[] = [
   { id: '12', name: 'Balıkçı Sabahattin', slug: 'balikci-sabahattin', address: 'Sultanahmet, İstanbul', category: { name: 'Deniz Ürünleri', icon: '🐟' } },
 ];
 
-export default function AddReviewModal({ isOpen, onClose }: AddReviewModalProps) {
+export default function AddReviewModal({ isOpen, onClose, onSuccess }: AddReviewModalProps) {
   const { isAuthenticated, user } = useAuthStore();
   const [step, setStep] = useState<'venue' | 'rating' | 'details'>('venue');
   const [searchQuery, setSearchQuery] = useState('');
@@ -113,11 +130,13 @@ export default function AddReviewModal({ isOpen, onClose }: AddReviewModalProps)
     await new Promise(resolve => setTimeout(resolve, 800));
 
     // Save to localStorage
-    const reviewData = {
+    const reviewData: NewReviewData = {
       id: `user_${Date.now()}`,
       venueId: selectedVenue.id,
       venueName: selectedVenue.name,
       venueSlug: selectedVenue.slug,
+      venueCategory: selectedVenue.category,
+      venueAddress: selectedVenue.address,
       type: reviewType,
       itemName: reviewType === 'item' ? itemName : null,
       rating,
@@ -151,6 +170,12 @@ export default function AddReviewModal({ isOpen, onClose }: AddReviewModalProps)
 
     setIsSubmitting(false);
     toast.success('Değerlendirmeniz kaydedildi! 🎉');
+    
+    // Call success callback with review data
+    if (onSuccess) {
+      onSuccess(reviewData);
+    }
+    
     onClose();
   };
 
