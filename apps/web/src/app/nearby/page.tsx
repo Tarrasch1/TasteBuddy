@@ -1,10 +1,12 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
-import { MapPin, Star, Loader2, Navigation, ChevronLeft, Map, List, RefreshCw } from 'lucide-react';
+import { MapPin, Star, Loader2, Navigation, ChevronLeft, Map, List, RefreshCw, Wifi, WifiOff, Search } from 'lucide-react';
 import { toast } from 'sonner';
+import { searchPlaces, transformFoursquarePlace, TransformedVenue, ALL_FOOD_CATEGORIES } from '@/services/foursquare';
+import { getCurrentLocation, LocationCoords, calculateDistance, formatDistance } from '@/services/location';
 
 // Dynamic import for Map
 const VenueMap = dynamic(() => import('@/components/venue-map'), {
@@ -16,577 +18,161 @@ const VenueMap = dynamic(() => import('@/components/venue-map'), {
   ),
 });
 
-interface NearbyVenue {
-  id: string;
-  name: string;
-  slug: string;
-  address: string;
-  latitude: number;
-  longitude: number;
-  distance?: number;
-  averageRating: number;
-  reviewCount: number;
-  priceLevel: number;
-  photos: { url: string }[];
-  category: { name: string; icon: string };
-}
-
-// Haversine formula for distance calculation (km)
-function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
-  const R = 6371; // Earth's radius in km
-  const dLat = (lat2 - lat1) * Math.PI / 180;
-  const dLon = (lon2 - lon1) * Math.PI / 180;
-  const a = 
-    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
-    Math.sin(dLon / 2) * Math.sin(dLon / 2);
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-  return R * c;
-}
-
-// İstanbul'daki tüm mekanlar (gerçek koordinatlar)
-const ALL_VENUES: Omit<NearbyVenue, 'distance'>[] = [
-  {
-    id: '1',
-    name: 'Nusr-Et Steakhouse',
-    slug: 'nusr-et-steakhouse',
-    address: 'Etiler Mah. Nispetiye Cad. No:87',
-    latitude: 41.0789,
-    longitude: 29.0328,
-    averageRating: 4.5,
-    reviewCount: 2450,
-    priceLevel: 4,
-    photos: [],
-    category: { name: 'Türk Mutfağı', icon: '🥩' },
-  },
-  {
-    id: '2',
-    name: 'Karaköy Güllüoğlu',
-    slug: 'karakoy-gulluoglu',
-    address: 'Rıhtım Cad. Katlı Otopark Altı No:3-4',
-    latitude: 41.0226,
-    longitude: 28.9774,
-    averageRating: 4.8,
-    reviewCount: 5230,
-    priceLevel: 2,
-    photos: [],
-    category: { name: 'Tatlıcı', icon: '🍯' },
-  },
-  {
-    id: '3',
-    name: 'Mikla',
-    slug: 'mikla-restaurant',
-    address: 'The Marmara Pera, Meşrutiyet Cad. No:15',
-    latitude: 41.0316,
-    longitude: 28.9747,
-    averageRating: 4.7,
-    reviewCount: 890,
-    priceLevel: 4,
-    photos: [],
-    category: { name: 'Fine Dining', icon: '🍽️' },
-  },
-  {
-    id: '4',
-    name: 'Kronotrop Coffee',
-    slug: 'kronotrop-coffee',
-    address: 'Cihangir Mah. Akarsu Yokuşu Cad. No:3',
-    latitude: 41.0308,
-    longitude: 28.9839,
-    averageRating: 4.6,
-    reviewCount: 1820,
-    priceLevel: 2,
-    photos: [],
-    category: { name: 'Kafe', icon: '☕' },
-  },
-  {
-    id: '5',
-    name: 'Çiya Sofrası',
-    slug: 'ciya-sofrasi',
-    address: 'Caferağa Mah. Güneşlibahçe Sok. No:43',
-    latitude: 40.9903,
-    longitude: 29.0293,
-    averageRating: 4.5,
-    reviewCount: 3210,
-    priceLevel: 2,
-    photos: [],
-    category: { name: 'Türk Mutfağı', icon: '🍲' },
-  },
-  {
-    id: '6',
-    name: 'Big Chefs',
-    slug: 'big-chefs-zorlu',
-    address: 'Zorlu Center, Levazım Mah.',
-    latitude: 41.0677,
-    longitude: 29.0165,
-    averageRating: 4.3,
-    reviewCount: 4560,
-    priceLevel: 3,
-    photos: [],
-    category: { name: 'Dünya Mutfağı', icon: '🌍' },
-  },
-  {
-    id: '7',
-    name: 'Sunset Grill & Bar',
-    slug: 'sunset-grill-bar',
-    address: 'Yol Sokak No:2, Ulus Parkı',
-    latitude: 41.0731,
-    longitude: 29.0483,
-    averageRating: 4.4,
-    reviewCount: 1290,
-    priceLevel: 4,
-    photos: [],
-    category: { name: 'Fine Dining', icon: '🌅' },
-  },
-  {
-    id: '8',
-    name: 'Karaköy Lokantası',
-    slug: 'karakoy-lokantasi',
-    address: 'Kemankeş Cad. No:37, Karaköy',
-    latitude: 41.0234,
-    longitude: 28.9761,
-    averageRating: 4.5,
-    reviewCount: 2870,
-    priceLevel: 3,
-    photos: [],
-    category: { name: 'Meyhane', icon: '🍻' },
-  },
-  {
-    id: '9',
-    name: 'Burger King - Taksim',
-    slug: 'burger-king-taksim',
-    address: 'İstiklal Cad. No:8, Beyoğlu',
-    latitude: 41.0370,
-    longitude: 28.9850,
-    averageRating: 3.8,
-    reviewCount: 890,
-    priceLevel: 1,
-    photos: [],
-    category: { name: 'Fast Food', icon: '🍔' },
-  },
-  {
-    id: '10',
-    name: 'Starbucks - Bebek',
-    slug: 'starbucks-bebek',
-    address: 'Cevdet Paşa Cad. No:34, Bebek',
-    latitude: 41.0762,
-    longitude: 29.0433,
-    averageRating: 4.2,
-    reviewCount: 1560,
-    priceLevel: 2,
-    photos: [],
-    category: { name: 'Kafe', icon: '☕' },
-  },
-  {
-    id: '11',
-    name: 'Balıkçı Sabahattin',
-    slug: 'balikci-sabahattin',
-    address: 'Seyit Hasan Kuyu Sok. No:1, Sultanahmet',
-    latitude: 41.0054,
-    longitude: 28.9768,
-    averageRating: 4.6,
-    reviewCount: 1890,
-    priceLevel: 3,
-    photos: [],
-    category: { name: 'Deniz Ürünleri', icon: '🐟' },
-  },
-  {
-    id: '12',
-    name: 'Pizza Il Forno',
-    slug: 'pizza-il-forno',
-    address: 'Bağdat Cad. No:456, Kadıköy',
-    latitude: 40.9780,
-    longitude: 29.0582,
-    averageRating: 4.4,
-    reviewCount: 2340,
-    priceLevel: 2,
-    photos: [],
-    category: { name: 'İtalyan Mutfağı', icon: '🍕' },
-  },
-  {
-    id: '13',
-    name: 'Wagamama',
-    slug: 'wagamama-istanbul',
-    address: 'Kanyon AVM, Levent',
-    latitude: 41.0792,
-    longitude: 29.0108,
-    averageRating: 4.3,
-    reviewCount: 1670,
-    priceLevel: 3,
-    photos: [],
-    category: { name: 'Japon Mutfağı', icon: '🍜' },
-  },
-  {
-    id: '14',
-    name: 'Gram - Nişantaşı',
-    slug: 'gram-nisantasi',
-    address: 'Abdi İpekçi Cad. No:32, Nişantaşı',
-    latitude: 41.0478,
-    longitude: 28.9914,
-    averageRating: 4.5,
-    reviewCount: 980,
-    priceLevel: 3,
-    photos: [],
-    category: { name: 'Sağlıklı', icon: '🥗' },
-  },
-  {
-    id: '15',
-    name: 'Köfteci Yusuf',
-    slug: 'kofteci-yusuf-eminonu',
-    address: 'Hamidiye Cad. No:14, Eminönü',
-    latitude: 41.0169,
-    longitude: 28.9700,
-    averageRating: 4.2,
-    reviewCount: 4120,
-    priceLevel: 1,
-    photos: [],
-    category: { name: 'Türk Mutfağı', icon: '🍖' },
-  },
-  // Ek mekanlar
-  {
-    id: '16',
-    name: 'Hayvore',
-    slug: 'hayvore-asmalimescit',
-    address: 'Asmalımescit Mah. Turnacıbaşı Cad. No:4',
-    latitude: 41.0323,
-    longitude: 28.9762,
-    averageRating: 4.4,
-    reviewCount: 1890,
-    priceLevel: 2,
-    photos: [],
-    category: { name: 'Karadeniz Mutfağı', icon: '🧀' },
-  },
-  {
-    id: '17',
-    name: 'İstanbul Modern Cafe',
-    slug: 'istanbul-modern-cafe',
-    address: 'Meclis-i Mebusan Cad. Liman Sahası',
-    latitude: 41.0264,
-    longitude: 28.9826,
-    averageRating: 4.3,
-    reviewCount: 980,
-    priceLevel: 3,
-    photos: [],
-    category: { name: 'Kafe', icon: '🎨' },
-  },
-  {
-    id: '18',
-    name: 'Privato Cafe',
-    slug: 'privato-cafe',
-    address: 'Cihangir Mah. Akarsu Cad. No:1',
-    latitude: 41.0315,
-    longitude: 28.9851,
-    averageRating: 4.4,
-    reviewCount: 1670,
-    priceLevel: 2,
-    photos: [],
-    category: { name: 'Kafe', icon: '☕' },
-  },
-  {
-    id: '19',
-    name: 'Gram',
-    slug: 'gram',
-    address: 'Şahkulu Mah. Galip Dede Cad. No:8, Galata',
-    latitude: 41.0251,
-    longitude: 28.9742,
-    averageRating: 4.5,
-    reviewCount: 2150,
-    priceLevel: 2,
-    photos: [],
-    category: { name: 'Brunch', icon: '🥞' },
-  },
-  {
-    id: '20',
-    name: 'Mandabatmaz',
-    slug: 'mandabatmaz',
-    address: 'Olivia Geçidi No:1, Beyoğlu',
-    latitude: 41.0335,
-    longitude: 28.9765,
-    averageRating: 4.7,
-    reviewCount: 3450,
-    priceLevel: 1,
-    photos: [],
-    category: { name: 'Türk Kahvesi', icon: '☕' },
-  },
-  {
-    id: '21',
-    name: 'Tarihi Karaköy Balıkçısı',
-    slug: 'tarihi-karakoy-balikcisi',
-    address: 'Kemankeş Cad. No:52, Karaköy',
-    latitude: 41.0218,
-    longitude: 28.9752,
-    averageRating: 4.3,
-    reviewCount: 2890,
-    priceLevel: 2,
-    photos: [],
-    category: { name: 'Deniz Ürünleri', icon: '🐟' },
-  },
-  {
-    id: '22',
-    name: 'Neolokal',
-    slug: 'neolokal',
-    address: 'Bankalar Cad. No:2, Karaköy',
-    latitude: 41.0227,
-    longitude: 28.9745,
-    averageRating: 4.6,
-    reviewCount: 720,
-    priceLevel: 4,
-    photos: [],
-    category: { name: 'Fine Dining', icon: '🍽️' },
-  },
-  {
-    id: '23',
-    name: 'Kantin',
-    slug: 'kantin-nisantasi',
-    address: 'Akkavak Sok. No:30, Nişantaşı',
-    latitude: 41.0485,
-    longitude: 28.9936,
-    averageRating: 4.4,
-    reviewCount: 1560,
-    priceLevel: 3,
-    photos: [],
-    category: { name: 'Modern Türk', icon: '🍴' },
-  },
-  {
-    id: '24',
-    name: 'Pepo',
-    slug: 'pepo-beyoglu',
-    address: 'Meşrutiyet Cad. No:21, Beyoğlu',
-    latitude: 41.0312,
-    longitude: 28.9748,
-    averageRating: 4.3,
-    reviewCount: 890,
-    priceLevel: 2,
-    photos: [],
-    category: { name: 'Kafe', icon: '☕' },
-  },
-  {
-    id: '25',
-    name: 'Under',
-    slug: 'under-karakoy',
-    address: 'Kemankeş Cad. No:7, Karaköy',
-    latitude: 41.0222,
-    longitude: 28.9758,
-    averageRating: 4.5,
-    reviewCount: 1230,
-    priceLevel: 3,
-    photos: [],
-    category: { name: 'Bar & Restoran', icon: '🍸' },
-  },
-  {
-    id: '26',
-    name: 'Lokanta Maya',
-    slug: 'lokanta-maya',
-    address: 'Kemankeş Cad. No:35, Karaköy',
-    latitude: 41.0231,
-    longitude: 28.9759,
-    averageRating: 4.4,
-    reviewCount: 1890,
-    priceLevel: 3,
-    photos: [],
-    category: { name: 'Modern Türk', icon: '🍽️' },
-  },
-  {
-    id: '27',
-    name: 'House Cafe Ortaköy',
-    slug: 'house-cafe-ortakoy',
-    address: 'Salhane Sok. No:1, Ortaköy',
-    latitude: 41.0483,
-    longitude: 29.0271,
-    averageRating: 4.2,
-    reviewCount: 2340,
-    priceLevel: 3,
-    photos: [],
-    category: { name: 'Kafe', icon: '☕' },
-  },
-  {
-    id: '28',
-    name: 'Bebek Balıkçısı',
-    slug: 'bebek-balikcisi',
-    address: 'Cevdet Paşa Cad. No:26, Bebek',
-    latitude: 41.0755,
-    longitude: 29.0428,
-    averageRating: 4.5,
-    reviewCount: 1670,
-    priceLevel: 4,
-    photos: [],
-    category: { name: 'Deniz Ürünleri', icon: '🐟' },
-  },
-  {
-    id: '29',
-    name: 'Ara Cafe',
-    slug: 'ara-cafe',
-    address: 'Tosbağa Sok. No:2, Galata',
-    latitude: 41.0258,
-    longitude: 28.9738,
-    averageRating: 4.3,
-    reviewCount: 1240,
-    priceLevel: 2,
-    photos: [],
-    category: { name: 'Kafe', icon: '📷' },
-  },
-  {
-    id: '30',
-    name: 'Beyaz Fırın',
-    slug: 'beyaz-firin',
-    address: 'İstiklal Cad. No:85, Beyoğlu',
-    latitude: 41.0345,
-    longitude: 28.9780,
-    averageRating: 4.4,
-    reviewCount: 3670,
-    priceLevel: 2,
-    photos: [],
-    category: { name: 'Fırın & Pastane', icon: '🥐' },
-  },
-];
-
 export default function NearbyPage() {
   const [isLoading, setIsLoading] = useState(true);
+  const [isSearching, setIsSearching] = useState(false);
   const [locationError, setLocationError] = useState<string | null>(null);
-  const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
+  const [userLocation, setUserLocation] = useState<LocationCoords | null>(null);
   const [viewMode, setViewMode] = useState<'list' | 'map'>('list');
-  const [maxDistance, setMaxDistance] = useState<number>(50); // km
-  const [locationStatus, setLocationStatus] = useState<'checking' | 'granted' | 'denied' | 'fallback' | 'unavailable'>('checking');
+  const [maxDistance, setMaxDistance] = useState<number>(5); // km
+  const [locationStatus, setLocationStatus] = useState<'checking' | 'granted' | 'denied' | 'fallback' | 'ip' | 'unavailable'>('checking');
   const [showLocationPrompt, setShowLocationPrompt] = useState(false);
+  const [venues, setVenues] = useState<TransformedVenue[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [dataSource, setDataSource] = useState<'api' | 'fallback'>('api');
 
-  // Check permission status on mount
-  useEffect(() => {
-    checkLocationPermission();
-  }, []);
-
-  const checkLocationPermission = async () => {
-    setIsLoading(true);
-    setLocationError(null);
-    
-    // Check if geolocation is available
-    if (!navigator.geolocation) {
-      setLocationStatus('unavailable');
-      setLocationError('Tarayıcınız konum servisini desteklemiyor');
-      setShowLocationPrompt(true);
-      setIsLoading(false);
-      return;
-    }
-
-    // Check permission status if available (modern browsers)
-    if (navigator.permissions && navigator.permissions.query) {
-      try {
-        const result = await navigator.permissions.query({ name: 'geolocation' });
-        
-        if (result.state === 'granted') {
-          // Permission already granted, get location
-          getCurrentLocation();
-        } else if (result.state === 'denied') {
-          // Permission denied
-          setLocationStatus('denied');
-          setLocationError('Konum izni reddedildi. Yakınınızdaki mekanları görmek için konum iznine ihtiyacımız var.');
-          setShowLocationPrompt(true);
-          setIsLoading(false);
-        } else {
-          // Permission prompt will be shown
-          setShowLocationPrompt(true);
-          setIsLoading(false);
-        }
-        
-        // Listen for permission changes
-        result.addEventListener('change', () => {
-          if (result.state === 'granted') {
-            setShowLocationPrompt(false);
-            getCurrentLocation();
-          } else if (result.state === 'denied') {
-            setLocationStatus('denied');
-            setLocationError('Konum izni reddedildi');
-            setShowLocationPrompt(true);
-          }
-        });
-      } catch (error) {
-        // Permissions API not fully supported, show prompt
-        setShowLocationPrompt(true);
-        setIsLoading(false);
-      }
-    } else {
-      // No Permissions API, show prompt directly
-      setShowLocationPrompt(true);
-      setIsLoading(false);
-    }
-  };
-
-  const getCurrentLocation = () => {
+  // Fetch location and then venues
+  const fetchLocationAndVenues = useCallback(async (forceGPS = false) => {
     setIsLoading(true);
     setLocationError(null);
     setShowLocationPrompt(false);
-    
-    if (!navigator.geolocation) {
-      setLocationStatus('unavailable');
-      setLocationError('Tarayıcınız konum servisini desteklemiyor');
+
+    try {
+      // Get location with smart fallbacks
+      const location = await getCurrentLocation({
+        useIPFallback: !forceGPS,
+        useDefaultFallback: !forceGPS,
+        timeout: forceGPS ? 20000 : 10000,
+      });
+
+      setUserLocation(location);
+      
+      if (location.source === 'gps') {
+        setLocationStatus('granted');
+        toast.success('GPS konumunuz alındı!');
+      } else if (location.source === 'ip') {
+        setLocationStatus('ip');
+        toast.info('IP tabanlı konum kullanılıyor');
+      } else {
+        setLocationStatus('fallback');
+        toast.info('Varsayılan konum kullanılıyor');
+      }
+
+      // Fetch venues from Foursquare
+      await fetchVenues(location);
+    } catch (error: unknown) {
+      console.error('Location error:', error);
+      const errorMessage = error && typeof error === 'object' && 'message' in error 
+        ? (error as { message: string }).message 
+        : 'Konum alınamadı';
+      setLocationError(errorMessage);
       setShowLocationPrompt(true);
       setIsLoading(false);
-      return;
-    }
-
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        const { latitude, longitude } = position.coords;
-        setUserLocation({ lat: latitude, lng: longitude });
-        setLocationStatus('granted');
-        setIsLoading(false);
-        toast.success('Konumunuz başarıyla alındı!');
-      },
-      (error) => {
-        console.log('Geolocation error:', error.code, error.message);
-        
-        if (error.code === error.PERMISSION_DENIED) {
-          setLocationStatus('denied');
-          setLocationError('Konum izni reddedildi. Tarayıcı ayarlarından konum iznini etkinleştirin.');
-          setShowLocationPrompt(true);
-        } else if (error.code === error.POSITION_UNAVAILABLE) {
-          setLocationStatus('fallback');
-          setLocationError('Konum bilgisi alınamadı. GPS\'inizi kontrol edin veya varsayılan konum kullanın.');
-          setShowLocationPrompt(true);
-        } else if (error.code === error.TIMEOUT) {
-          setLocationStatus('fallback');
-          setLocationError('Konum alma zaman aşımına uğradı. Tekrar deneyin veya varsayılan konum kullanın.');
-          setShowLocationPrompt(true);
-        }
-        setIsLoading(false);
-      },
-      {
-        enableHighAccuracy: true,
-        timeout: 15000,
-        maximumAge: 60000,
+      
+      if (error && typeof error === 'object' && 'code' in error && (error as { code: string }).code === 'PERMISSION_DENIED') {
+        setLocationStatus('denied');
       }
-    );
+    }
+  }, []);
+
+  // Fetch venues from Foursquare API
+  const fetchVenues = async (location: LocationCoords) => {
+    setIsSearching(true);
+    
+    try {
+      const places = await searchPlaces({
+        ll: `${location.lat},${location.lng}`,
+        radius: maxDistance * 1000, // Convert to meters
+        limit: 50,
+        sort: 'DISTANCE',
+        categories: ALL_FOOD_CATEGORIES,
+        query: searchQuery || undefined,
+      });
+
+      if (places.length > 0) {
+        const transformedVenues = places.map(transformFoursquarePlace);
+        
+        // Calculate accurate distances
+        const venuesWithDistance = transformedVenues.map(venue => ({
+          ...venue,
+          distance: calculateDistance(
+            location.lat,
+            location.lng,
+            venue.latitude,
+            venue.longitude
+          ),
+        }));
+
+        // Sort by distance
+        venuesWithDistance.sort((a, b) => (a.distance || 0) - (b.distance || 0));
+        
+        setVenues(venuesWithDistance);
+        setDataSource('api');
+        console.log(`Found ${venuesWithDistance.length} venues from Foursquare`);
+      } else {
+        // No results from API, use fallback
+        setVenues([]);
+        setDataSource('fallback');
+        toast.info('Bu bölgede mekan bulunamadı');
+      }
+    } catch (error) {
+      console.error('Failed to fetch venues:', error);
+      setVenues([]);
+      setDataSource('fallback');
+      toast.error('Mekanlar yüklenemedi');
+    } finally {
+      setIsSearching(false);
+      setIsLoading(false);
+    }
   };
 
-  const useFallbackLocation = () => {
-    // Istanbul center as fallback
-    setUserLocation({ lat: 41.0082, lng: 28.9784 });
+  // Initial load
+  useEffect(() => {
+    fetchLocationAndVenues();
+  }, [fetchLocationAndVenues]);
+
+  // Refetch when distance changes
+  useEffect(() => {
+    if (userLocation && !isLoading) {
+      fetchVenues(userLocation);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [maxDistance]);
+
+  // Handle search
+  const handleSearch = () => {
+    if (userLocation) {
+      fetchVenues(userLocation);
+    }
+  };
+
+  // Use fallback Istanbul location
+  const useFallbackLocation = async () => {
+    const fallbackLocation: LocationCoords = {
+      lat: 41.0082,
+      lng: 28.9784,
+      source: 'fallback',
+    };
+    setUserLocation(fallbackLocation);
     setLocationStatus('fallback');
     setShowLocationPrompt(false);
     toast.info('İstanbul merkez konumu kullanılıyor');
+    await fetchVenues(fallbackLocation);
   };
 
-  // Calculate distances and sort venues
-  const nearbyVenues = useMemo(() => {
-    if (!userLocation) return [];
-    
-    const venuesWithDistance = ALL_VENUES.map(venue => ({
-      ...venue,
-      distance: calculateDistance(
-        userLocation.lat, 
-        userLocation.lng, 
-        venue.latitude, 
-        venue.longitude
-      ),
-    }));
-    
-    // Filter by max distance and sort by distance
-    return venuesWithDistance
-      .filter(venue => venue.distance <= maxDistance)
-      .sort((a, b) => a.distance - b.distance);
-  }, [userLocation, maxDistance]);
+  // Force GPS location
+  const forceGPSLocation = () => {
+    fetchLocationAndVenues(true);
+  };
+
+  // Filter venues by distance
+  const filteredVenues = useMemo(() => {
+    return venues.filter(venue => (venue.distance || 0) <= maxDistance);
+  }, [venues, maxDistance]);
 
   // Map venues format
   const mapVenues = useMemo(() => {
-    return nearbyVenues.map(venue => ({
+    return filteredVenues.map(venue => ({
       id: venue.id,
       name: venue.name,
       slug: venue.slug,
@@ -598,7 +184,7 @@ export default function NearbyPage() {
       priceLevel: venue.priceLevel,
       category: venue.category,
     }));
-  }, [nearbyVenues]);
+  }, [filteredVenues]);
 
   return (
     <div className="min-h-screen bg-background">
@@ -611,11 +197,12 @@ export default function NearbyPage() {
           <h1 className="text-lg font-semibold">Yakınımdaki Mekanlar</h1>
           <div className="flex items-center gap-2">
             <button
-              onClick={getCurrentLocation}
-              className="p-2 hover:bg-muted rounded-lg transition-colors"
+              onClick={() => fetchLocationAndVenues()}
+              disabled={isLoading || isSearching}
+              className="p-2 hover:bg-muted rounded-lg transition-colors disabled:opacity-50"
               title="Konumu Yenile"
             >
-              <RefreshCw className="h-4 w-4" />
+              <RefreshCw className={`h-4 w-4 ${(isLoading || isSearching) ? 'animate-spin' : ''}`} />
             </button>
             <div className="flex items-center border rounded-lg overflow-hidden">
               <button
@@ -661,7 +248,7 @@ export default function NearbyPage() {
                   <div className="p-3 bg-yellow-100 dark:bg-yellow-900/30 border border-yellow-300 dark:border-yellow-700 rounded-lg text-sm">
                     <p className="font-medium text-yellow-800 dark:text-yellow-200">Konum İzni Reddedildi</p>
                     <p className="text-yellow-700 dark:text-yellow-300 mt-1">
-                      Tarayıcı ayarlarından TasteBuddy için konum iznini etkinleştirin, ardından sayfayı yenileyin.
+                      Tarayıcı ayarlarından TasteBuddy için konum iznini etkinleştirin.
                     </p>
                   </div>
                   <button
@@ -674,7 +261,7 @@ export default function NearbyPage() {
               ) : (
                 <div className="flex flex-col sm:flex-row gap-3">
                   <button
-                    onClick={getCurrentLocation}
+                    onClick={forceGPSLocation}
                     disabled={isLoading}
                     className="flex items-center justify-center gap-2 py-3 px-6 bg-orange-600 hover:bg-orange-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50"
                   >
@@ -702,107 +289,161 @@ export default function NearbyPage() {
           </div>
         )}
 
-        {/* Fallback Location Warning Banner */}
-        {locationStatus === 'fallback' && userLocation && (
-          <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-lg flex items-center justify-between">
-            <div className="flex items-center gap-2 text-sm text-blue-700 dark:text-blue-300">
-              <MapPin className="h-4 w-4" />
-              <span>Varsayılan konum kullanılıyor (İstanbul Merkez)</span>
-            </div>
-            <button
-              onClick={getCurrentLocation}
-              className="text-sm text-blue-600 dark:text-blue-400 hover:underline font-medium"
-            >
-              Gerçek konumumu kullan
-            </button>
+        {/* Location Status Banners */}
+        {userLocation && (
+          <div className="mb-4 space-y-2">
+            {/* IP Location Banner */}
+            {locationStatus === 'ip' && (
+              <div className="p-3 bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-lg flex items-center justify-between">
+                <div className="flex items-center gap-2 text-sm text-blue-700 dark:text-blue-300">
+                  <Wifi className="h-4 w-4" />
+                  <span>IP tabanlı konum kullanılıyor (yaklaşık konum)</span>
+                </div>
+                <button
+                  onClick={forceGPSLocation}
+                  disabled={isLoading}
+                  className="text-sm text-blue-600 dark:text-blue-400 hover:underline font-medium disabled:opacity-50"
+                >
+                  GPS kullan
+                </button>
+              </div>
+            )}
+
+            {/* Fallback Location Banner */}
+            {locationStatus === 'fallback' && (
+              <div className="p-3 bg-yellow-50 dark:bg-yellow-950/30 border border-yellow-200 dark:border-yellow-800 rounded-lg flex items-center justify-between">
+                <div className="flex items-center gap-2 text-sm text-yellow-700 dark:text-yellow-300">
+                  <WifiOff className="h-4 w-4" />
+                  <span>Varsayılan konum kullanılıyor (İstanbul Merkez)</span>
+                </div>
+                <button
+                  onClick={forceGPSLocation}
+                  disabled={isLoading}
+                  className="text-sm text-yellow-600 dark:text-yellow-400 hover:underline font-medium disabled:opacity-50"
+                >
+                  Gerçek konumumu kullan
+                </button>
+              </div>
+            )}
+
+            {/* GPS Success Banner */}
+            {locationStatus === 'granted' && (
+              <div className="p-3 bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800 rounded-lg flex items-center justify-between">
+                <div className="flex items-center gap-2 text-sm text-green-700 dark:text-green-300">
+                  <Navigation className="h-4 w-4" />
+                  <span>GPS konumunuz aktif ✓</span>
+                  {userLocation.accuracy && (
+                    <span className="text-xs opacity-75">
+                      (±{Math.round(userLocation.accuracy)}m hassasiyet)
+                    </span>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
         )}
 
-        {/* Location Info */}
-        {userLocation && locationStatus === 'granted' && (
+        {/* Search and Filter Bar */}
+        {userLocation && !showLocationPrompt && (
+          <div className="mb-4 flex flex-col sm:flex-row gap-3">
+            {/* Search Input */}
+            <div className="flex-1 relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <input
+                type="text"
+                placeholder="Mekan ara (ör: kahve, pizza, kebap...)"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+                className="w-full pl-10 pr-4 py-2 border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary/50"
+              />
+            </div>
+            
+            {/* Distance Filter */}
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-muted-foreground whitespace-nowrap">Mesafe:</span>
+              <select
+                value={maxDistance}
+                onChange={(e) => setMaxDistance(Number(e.target.value))}
+                className="text-sm border rounded-lg px-3 py-2 bg-background focus:outline-none focus:ring-2 focus:ring-primary/50"
+              >
+                <option value={1}>1 km</option>
+                <option value={2}>2 km</option>
+                <option value={5}>5 km</option>
+                <option value={10}>10 km</option>
+                <option value={25}>25 km</option>
+                <option value={50}>50 km</option>
+              </select>
+              
+              <button
+                onClick={handleSearch}
+                disabled={isSearching}
+                className="px-4 py-2 bg-primary text-primary-foreground rounded-lg font-medium hover:bg-primary/90 disabled:opacity-50 transition-colors"
+              >
+                {isSearching ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Ara'}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Results Count & Data Source */}
+        {!isLoading && userLocation && filteredVenues.length > 0 && (
           <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2 text-sm text-green-600 dark:text-green-400">
-              <Navigation className="h-4 w-4" />
-              <span>Konumunuz alındı ✓</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-muted-foreground">Mesafe:</span>
-              <select
-                value={maxDistance}
-                onChange={(e) => setMaxDistance(Number(e.target.value))}
-                className="text-sm border rounded-lg px-2 py-1 bg-background"
-              >
-                <option value={1}>1 km</option>
-                <option value={2}>2 km</option>
-                <option value={5}>5 km</option>
-                <option value={10}>10 km</option>
-                <option value={25}>25 km</option>
-                <option value={50}>50 km (Tümü)</option>
-              </select>
-            </div>
+            <p className="text-sm text-muted-foreground">
+              {filteredVenues.length} mekan bulundu ({maxDistance} km içinde)
+            </p>
+            <span className="text-xs px-2 py-1 bg-muted rounded-full text-muted-foreground">
+              {dataSource === 'api' ? '🌐 Foursquare' : '📦 Demo'}
+            </span>
           </div>
         )}
 
-        {/* Distance Filter for Fallback Mode */}
-        {userLocation && locationStatus === 'fallback' && (
-          <div className="flex items-center justify-end mb-4">
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-muted-foreground">Mesafe:</span>
-              <select
-                value={maxDistance}
-                onChange={(e) => setMaxDistance(Number(e.target.value))}
-                className="text-sm border rounded-lg px-2 py-1 bg-background"
-              >
-                <option value={1}>1 km</option>
-                <option value={2}>2 km</option>
-                <option value={5}>5 km</option>
-                <option value={10}>10 km</option>
-                <option value={25}>25 km</option>
-                <option value={50}>50 km (Tümü)</option>
-              </select>
-            </div>
-          </div>
-        )}
-
-        {/* Results Count */}
-        {!isLoading && userLocation && nearbyVenues.length > 0 && (
-          <p className="text-sm text-muted-foreground mb-4">
-            {nearbyVenues.length} mekan bulundu ({maxDistance} km içinde)
-          </p>
-        )}
-
-        {isLoading && !showLocationPrompt ? (
+        {/* Loading State */}
+        {(isLoading || isSearching) && !showLocationPrompt ? (
           <div className="flex flex-col items-center justify-center py-20">
             <Loader2 className="h-8 w-8 animate-spin text-primary mb-4" />
-            <p className="text-muted-foreground">Yakınındaki mekanlar aranıyor...</p>
+            <p className="text-muted-foreground">
+              {isLoading ? 'Konum alınıyor...' : 'Mekanlar aranıyor...'}
+            </p>
           </div>
         ) : !userLocation ? (
-          // Don't show anything if we're still waiting for location permission
           null
         ) : viewMode === 'map' ? (
           <div className="rounded-xl overflow-hidden">
             <VenueMap
               venues={mapVenues}
-              center={userLocation ? [userLocation.lat, userLocation.lng] : [41.0082, 28.9784]}
-              zoom={13}
-              userLocation={userLocation}
+              center={[userLocation.lat, userLocation.lng]}
+              zoom={14}
+              userLocation={{ lat: userLocation.lat, lng: userLocation.lng }}
               className="h-[500px]"
             />
           </div>
-        ) : nearbyVenues.length === 0 ? (
+        ) : filteredVenues.length === 0 ? (
           <div className="text-center py-20">
             <MapPin className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-            <p className="text-muted-foreground mb-4">Bu mesafe içinde mekan bulunamadı</p>
-            <button
-              onClick={() => setMaxDistance(50)}
-              className="text-primary hover:underline"
-            >
-              Tüm mekanları göster
-            </button>
+            <p className="text-muted-foreground mb-4">
+              {searchQuery ? 'Aramanızla eşleşen mekan bulunamadı' : 'Bu mesafe içinde mekan bulunamadı'}
+            </p>
+            <div className="flex flex-col sm:flex-row gap-2 justify-center">
+              {searchQuery && (
+                <button
+                  onClick={() => { setSearchQuery(''); handleSearch(); }}
+                  className="text-primary hover:underline"
+                >
+                  Aramayı temizle
+                </button>
+              )}
+              <button
+                onClick={() => setMaxDistance(50)}
+                className="text-primary hover:underline"
+              >
+                Mesafeyi artır
+              </button>
+            </div>
           </div>
         ) : (
           <div className="space-y-4">
-            {nearbyVenues.map((venue) => (
+            {filteredVenues.map((venue) => (
               <Link
                 key={venue.id}
                 href={`/venues/${venue.slug}`}
@@ -827,13 +468,17 @@ export default function NearbyPage() {
                   <div className="flex items-center gap-3 mt-2 text-sm">
                     <span className="flex items-center gap-1 font-medium text-primary">
                       <MapPin className="h-3 w-3" />
-                      {venue.distance! < 1 
-                        ? `${(venue.distance! * 1000).toFixed(0)} m`
-                        : `${venue.distance!.toFixed(1)} km`
-                      }
+                      {formatDistance(venue.distance || 0)}
                     </span>
-                    <span className="text-muted-foreground">{Array(venue.priceLevel).fill('₺').join('')}</span>
-                    <span className="text-muted-foreground">{venue.reviewCount} değerlendirme</span>
+                    <span className="text-muted-foreground">
+                      {Array(venue.priceLevel || 2).fill('₺').join('')}
+                    </span>
+                    {venue.reviewCount > 0 && (
+                      <span className="text-muted-foreground">{venue.reviewCount} değerlendirme</span>
+                    )}
+                    {venue.source === 'foursquare' && (
+                      <span className="text-xs text-blue-500">🌐</span>
+                    )}
                   </div>
                 </div>
               </Link>
