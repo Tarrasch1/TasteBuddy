@@ -18,6 +18,69 @@ const VenueMap = dynamic(() => import('@/components/venue-map'), {
   ),
 });
 
+// Demo venues generator - creates venues around user's location
+function getDemoVenues(location: LocationCoords): TransformedVenue[] {
+  const demoData = [
+    { name: 'Starbucks', icon: '☕', category: 'Kafe', price: 3, rating: 4.2 },
+    { name: 'Burger King', icon: '🍔', category: 'Fast Food', price: 2, rating: 3.8 },
+    { name: 'Pizza Hut', icon: '🍕', category: 'Pizzacı', price: 2, rating: 4.0 },
+    { name: 'Köfteci Yusuf', icon: '🍖', category: 'Türk Mutfağı', price: 2, rating: 4.3 },
+    { name: 'Simit Sarayı', icon: '🥯', category: 'Fırın', price: 1, rating: 4.1 },
+    { name: 'McDonald\'s', icon: '🍟', category: 'Fast Food', price: 2, rating: 3.9 },
+    { name: 'Kahve Dünyası', icon: '☕', category: 'Kafe', price: 2, rating: 4.4 },
+    { name: 'Günaydın Kebap', icon: '🍢', category: 'Kebapçı', price: 3, rating: 4.5 },
+    { name: 'Big Chefs', icon: '🍽️', category: 'Dünya Mutfağı', price: 3, rating: 4.2 },
+    { name: 'Cookshop', icon: '🥗', category: 'Sağlıklı', price: 3, rating: 4.3 },
+    { name: 'Midpoint', icon: '🍔', category: 'Amerikan', price: 2, rating: 4.0 },
+    { name: 'Nusret', icon: '🥩', category: 'Steakhouse', price: 4, rating: 4.6 },
+    { name: 'Domino\'s Pizza', icon: '🍕', category: 'Pizzacı', price: 2, rating: 4.0 },
+    { name: 'Popeyes', icon: '🍗', category: 'Fast Food', price: 2, rating: 4.1 },
+    { name: 'Tavuk Dünyası', icon: '🍗', category: 'Fast Food', price: 2, rating: 4.0 },
+    { name: 'Espresso Lab', icon: '☕', category: 'Kafe', price: 3, rating: 4.5 },
+    { name: 'Balıkçı Kahraman', icon: '🐟', category: 'Deniz Ürünleri', price: 3, rating: 4.4 },
+    { name: 'Hacı Bekir', icon: '🍬', category: 'Tatlıcı', price: 2, rating: 4.7 },
+    { name: 'Mado', icon: '🍦', category: 'Dondurmacı', price: 2, rating: 4.3 },
+    { name: 'Happy Moon\'s', icon: '🌙', category: 'Dünya Mutfağı', price: 3, rating: 4.1 },
+  ];
+
+  // Generate venues around user's location
+  return demoData.map((demo, index) => {
+    // Random offset within ~2km radius
+    const latOffset = (Math.random() - 0.5) * 0.02;
+    const lngOffset = (Math.random() - 0.5) * 0.02;
+    const lat = location.lat + latOffset;
+    const lng = location.lng + lngOffset;
+    
+    const distance = calculateDistance(location.lat, location.lng, lat, lng);
+    
+    return {
+      id: `demo-${index}`,
+      name: demo.name,
+      slug: demo.name.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-'),
+      address: `Yakınınızda (Demo)`,
+      latitude: lat,
+      longitude: lng,
+      distance: distance,
+      averageRating: demo.rating,
+      reviewCount: Math.floor(Math.random() * 500) + 50,
+      priceLevel: demo.price,
+      photos: [],
+      category: { name: demo.category, icon: demo.icon },
+      source: 'local' as const,
+    };
+  }).sort((a, b) => (a.distance || 0) - (b.distance || 0));
+}
+
+// Dynamic import for Map
+const VenueMap = dynamic(() => import('@/components/venue-map'), {
+  ssr: false,
+  loading: () => (
+    <div className="h-[400px] bg-muted rounded-xl flex items-center justify-center">
+      <Loader2 className="h-6 w-6 animate-spin text-primary" />
+    </div>
+  ),
+});
+
 export default function NearbyPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSearching, setIsSearching] = useState(false);
@@ -114,16 +177,20 @@ export default function NearbyPage() {
         setDataSource('api');
         console.log(`Found ${venuesWithDistance.length} venues from Foursquare`);
       } else {
-        // No results from API, use fallback
-        setVenues([]);
+        // No results from API, use demo fallback data
+        console.log('No API results, using demo data');
+        const demoVenues = getDemoVenues(location);
+        setVenues(demoVenues);
         setDataSource('fallback');
-        toast.info('Bu bölgede mekan bulunamadı');
+        toast.info('Demo mekanlar gösteriliyor (API bağlantısı yok)');
       }
     } catch (error) {
       console.error('Failed to fetch venues:', error);
-      setVenues([]);
+      // Use demo data on error
+      const demoVenues = getDemoVenues(location);
+      setVenues(demoVenues);
       setDataSource('fallback');
-      toast.error('Mekanlar yüklenemedi');
+      toast.error('API bağlantısı başarısız, demo veriler gösteriliyor');
     } finally {
       setIsSearching(false);
       setIsLoading(false);

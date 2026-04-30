@@ -2,6 +2,11 @@
 const FOURSQUARE_API_KEY = process.env.NEXT_PUBLIC_FOURSQUARE_API_KEY;
 const BASE_URL = 'https://api.foursquare.com/v3';
 
+// Debug: check if API key is present
+if (typeof window !== 'undefined') {
+  console.log('Foursquare API Key configured:', !!FOURSQUARE_API_KEY, FOURSQUARE_API_KEY ? `(${FOURSQUARE_API_KEY.slice(0, 8)}...)` : '');
+}
+
 export interface FoursquarePlace {
   fsq_id: string;
   name: string;
@@ -149,7 +154,7 @@ export const getCategoryNameTR = (categoryName: string): string => {
 // Search for places near a location
 export async function searchPlaces(params: PlaceSearchParams): Promise<FoursquarePlace[]> {
   if (!FOURSQUARE_API_KEY) {
-    console.error('Foursquare API key is not configured');
+    console.error('Foursquare API key is not configured - returning empty');
     return [];
   }
 
@@ -158,20 +163,29 @@ export async function searchPlaces(params: PlaceSearchParams): Promise<Foursquar
     radius: String(params.radius || 5000),
     limit: String(params.limit || 50),
     sort: params.sort || 'DISTANCE',
-    categories: params.categories || ALL_FOOD_CATEGORIES,
   });
+
+  // Only add categories if no query
+  if (!params.query) {
+    searchParams.append('categories', params.categories || ALL_FOOD_CATEGORIES);
+  }
 
   if (params.query) {
     searchParams.append('query', params.query);
   }
 
+  const url = `${BASE_URL}/places/search?${searchParams}`;
+  console.log('Foursquare API request:', url);
+
   try {
-    const response = await fetch(`${BASE_URL}/places/search?${searchParams}`, {
+    const response = await fetch(url, {
       headers: {
         'Authorization': FOURSQUARE_API_KEY,
         'Accept': 'application/json',
       },
     });
+
+    console.log('Foursquare API response status:', response.status);
 
     if (!response.ok) {
       const error = await response.text();
@@ -180,6 +194,7 @@ export async function searchPlaces(params: PlaceSearchParams): Promise<Foursquar
     }
 
     const data = await response.json();
+    console.log('Foursquare API results:', data.results?.length || 0, 'places');
     return data.results || [];
   } catch (error) {
     console.error('Failed to fetch places:', error);
