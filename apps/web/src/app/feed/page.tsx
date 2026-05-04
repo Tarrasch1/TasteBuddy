@@ -6,9 +6,9 @@ import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { 
   Heart, MessageCircle, Bookmark, Share2, MoreHorizontal,
-  Star, MapPin, Utensils, Coffee, Camera, Award, TrendingUp,
-  Users, Bell, Search, Home, Compass, Trophy, User, ChevronRight,
-  ThumbsUp, Send, X, Filter, Plus
+  Star, MapPin, Utensils, Coffee, Camera, TrendingUp,
+  Bell, Search, Home, Compass, Trophy, User, ChevronRight,
+  ThumbsUp, Send, X, Plus, BookOpen
 } from 'lucide-react';
 import { useAuthStore } from '@/stores/auth-store';
 import { toast } from 'sonner';
@@ -290,7 +290,7 @@ export default function FeedPage() {
   const [commentingOn, setCommentingOn] = useState<string | null>(null);
   const [expandedComments, setExpandedComments] = useState<string | null>(null);
   const [commentText, setCommentText] = useState('');
-  const [filter, setFilter] = useState<'all' | 'reviews' | 'badges'>('all');
+
   const [showAddReview, setShowAddReview] = useState(false);
 
   useEffect(() => {
@@ -404,12 +404,7 @@ export default function FeedPage() {
     }
   };
 
-  const filteredFeed = feedItems.filter(item => {
-    if (filter === 'all') return true;
-    if (filter === 'reviews') return item.type === 'venue_review' || item.type === 'item_review';
-    if (filter === 'badges') return item.type === 'badge_earned';
-    return true;
-  });
+
 
   if (!hasHydrated || !isAuthenticated) {
     return (
@@ -444,6 +439,9 @@ export default function FeedPage() {
             </Link>
             <Link href="/explore" className="p-2 hover:bg-muted rounded-lg text-muted-foreground hover:text-foreground">
               <Compass className="h-5 w-5" />
+            </Link>
+            <Link href="/daily-guide" className="p-2 hover:bg-muted rounded-lg text-muted-foreground hover:text-foreground" title="Günlük Rehber">
+              <BookOpen className="h-5 w-5" />
             </Link>
             <Link href="/leaderboard" className="p-2 hover:bg-muted rounded-lg text-muted-foreground hover:text-foreground">
               <Trophy className="h-5 w-5" />
@@ -491,59 +489,14 @@ export default function FeedPage() {
                 </div>
               </div>
 
-              {/* Quick Links */}
-              <div className="bg-card border rounded-xl p-4">
-                <h3 className="font-semibold mb-3">Hızlı Erişim</h3>
-                <nav className="space-y-1">
-                  <Link href="/nearby" className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted transition-colors">
-                    <MapPin className="h-4 w-4 text-primary" />
-                    <span className="text-sm">Yakınımdaki Mekanlar</span>
-                  </Link>
-                  <Link href="/dashboard/saved" className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted transition-colors">
-                    <Bookmark className="h-4 w-4 text-primary" />
-                    <span className="text-sm">Kaydedilenler</span>
-                  </Link>
-                  <Link href="/dashboard/profile" className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted transition-colors">
-                    <Award className="h-4 w-4 text-primary" />
-                    <span className="text-sm">Rozetlerim</span>
-                  </Link>
-                </nav>
-              </div>
+
             </div>
           </aside>
 
           {/* Main Feed */}
           <div className="lg:col-span-6 space-y-4">
-            {/* Filter Tabs */}
-            <div className="flex items-center gap-2 bg-card border rounded-xl p-2">
-              <button
-                onClick={() => setFilter('all')}
-                className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-colors ${
-                  filter === 'all' ? 'bg-primary text-primary-foreground' : 'hover:bg-muted'
-                }`}
-              >
-                Tümü
-              </button>
-              <button
-                onClick={() => setFilter('reviews')}
-                className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-colors ${
-                  filter === 'reviews' ? 'bg-primary text-primary-foreground' : 'hover:bg-muted'
-                }`}
-              >
-                Değerlendirmeler
-              </button>
-              <button
-                onClick={() => setFilter('badges')}
-                className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-colors ${
-                  filter === 'badges' ? 'bg-primary text-primary-foreground' : 'hover:bg-muted'
-                }`}
-              >
-                Rozetler
-              </button>
-            </div>
-
             {/* Feed Items */}
-            {filteredFeed.map((item) => (
+            {feedItems.map((item) => (
               <article key={item.id} className="bg-card border rounded-xl overflow-hidden">
                 {/* Header */}
                 <div className="p-4 flex items-center justify-between">

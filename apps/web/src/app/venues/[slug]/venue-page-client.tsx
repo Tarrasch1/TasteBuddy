@@ -1096,11 +1096,11 @@ export default function VenueDetailPage() {
                     {reviewPhotos.length < 5 && (
                       <label className="w-20 h-20 border-2 border-dashed rounded-lg flex flex-col items-center justify-center cursor-pointer hover:border-primary hover:bg-primary/5 transition-colors">
                         <Camera className="h-5 w-5 text-muted-foreground" />
-                        <span className="text-xs text-muted-foreground mt-1">Ekle</span>
+                        <span className="text-xs text-muted-foreground mt-1">Çek</span>
                         <input
                           type="file"
                           accept="image/*"
-                          multiple
+                          capture="environment"
                           className="hidden"
                           onChange={(e) => handlePhotoUpload(e, setReviewPhotos)}
                         />
@@ -1382,7 +1382,7 @@ export default function VenueDetailPage() {
                     <input
                       type="file"
                       accept="image/*"
-                      multiple
+                      capture="environment"
                       className="hidden"
                       onChange={(e) => handlePhotoUpload(e, setItemPhotos)}
                     />

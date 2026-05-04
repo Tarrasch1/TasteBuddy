@@ -1,10 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { 
   Trophy, Star, MapPin, TrendingUp, Crown, Medal, Award,
-  Utensils, Coffee, Home, Compass, User, ChevronRight, Filter
+  Utensils, Coffee, Home, Compass, User, ChevronRight, Filter, Users, BookOpen
 } from 'lucide-react';
 
 interface LeaderboardVenue {
@@ -76,11 +76,42 @@ const DISTRICTS = [
   { id: 'uskudar', name: 'Üsküdar' },
 ];
 
+// Arkadaşlar arası sıralama verisi
+interface FriendRank {
+  rank: number;
+  id: string;
+  displayName: string;
+  username: string;
+  reviewCount: number;
+  avgRating: number;
+  badges: number;
+  favoriteCategory: string;
+  change: 'up' | 'down' | 'same';
+}
+
+const DEMO_FRIENDS: FriendRank[] = [
+  { rank: 1, id: 'f1', displayName: 'Ayşe Yılmaz', username: 'ayseyilmaz', reviewCount: 156, avgRating: 4.3, badges: 12, favoriteCategory: 'Türk Mutfağı', change: 'same' },
+  { rank: 2, id: 'f2', displayName: 'Mehmet Kaya', username: 'mehmetkaya', reviewCount: 142, avgRating: 4.1, badges: 10, favoriteCategory: 'Kafe', change: 'up' },
+  { rank: 3, id: 'f3', displayName: 'Zeynep Demir', username: 'zeynepdemir', reviewCount: 128, avgRating: 4.5, badges: 9, favoriteCategory: 'Fine Dining', change: 'up' },
+  { rank: 4, id: 'f4', displayName: 'Ali Öztürk', username: 'aliozturk', reviewCount: 98, avgRating: 3.9, badges: 7, favoriteCategory: 'Fast Food', change: 'down' },
+  { rank: 5, id: 'f5', displayName: 'Elif Arslan', username: 'elifarslan', reviewCount: 87, avgRating: 4.4, badges: 8, favoriteCategory: 'Tatlıcı', change: 'same' },
+  { rank: 6, id: 'f6', displayName: 'Can Yıldız', username: 'canyildiz', reviewCount: 76, avgRating: 4.2, badges: 6, favoriteCategory: 'Deniz Ürünleri', change: 'up' },
+  { rank: 7, id: 'f7', displayName: 'Selin Ak', username: 'selinak', reviewCount: 65, avgRating: 4.6, badges: 5, favoriteCategory: 'Fine Dining', change: 'down' },
+  { rank: 8, id: 'f8', displayName: 'Burak Özdemir', username: 'burakozdemir', reviewCount: 54, avgRating: 4.0, badges: 4, favoriteCategory: 'Kebap', change: 'same' },
+];
+
 export default function LeaderboardPage() {
-  const [tab, setTab] = useState<'venues' | 'items'>('venues');
+  const [tab, setTab] = useState<'venues' | 'items' | 'friends'>('venues');
   const [sortBy, setSortBy] = useState<'rating' | 'reviews'>('rating');
   const [category, setCategory] = useState('all');
   const [district, setDistrict] = useState('all');
+  const [friendSort, setFriendSort] = useState<'reviews' | 'rating' | 'badges'>('reviews');
+
+  const sortedFriends = [...DEMO_FRIENDS].sort((a, b) => {
+    if (friendSort === 'reviews') return b.reviewCount - a.reviewCount;
+    if (friendSort === 'rating') return b.avgRating - a.avgRating;
+    return b.badges - a.badges;
+  }).map((f, idx) => ({ ...f, rank: idx + 1 }));
 
   const getRankIcon = (rank: number) => {
     if (rank === 1) return <Crown className="h-6 w-6 text-yellow-500" />;
@@ -161,9 +192,21 @@ export default function LeaderboardPage() {
             <Utensils className="h-4 w-4 inline mr-2" />
             Ürünler
           </button>
+          <button
+            onClick={() => setTab('friends')}
+            className={`flex-1 py-3 px-4 rounded-xl text-sm font-medium transition-colors ${
+              tab === 'friends' 
+                ? 'bg-primary text-primary-foreground' 
+                : 'bg-card border hover:bg-muted'
+            }`}
+          >
+            <Users className="h-4 w-4 inline mr-2" />
+            Arkadaşlar
+          </button>
         </div>
 
-        {/* Filters */}
+        {/* Filters - only for venues/items */}
+        {tab !== 'friends' && (
         <div className="flex flex-wrap gap-2 mb-6">
           {/* Sort */}
           <select
@@ -199,8 +242,95 @@ export default function LeaderboardPage() {
             ))}
           </select>
         </div>
+        )}
 
-        {/* Leaderboard List */}
+        {/* Friends Leaderboard */}
+        {tab === 'friends' && (
+          <div className="space-y-4">
+            {/* Friends sort */}
+            <div className="flex items-center gap-2 mb-2">
+              <span className="text-sm text-muted-foreground">Sırala:</span>
+              <select
+                value={friendSort}
+                onChange={(e) => setFriendSort(e.target.value as 'reviews' | 'rating' | 'badges')}
+                className="bg-card border rounded-lg px-3 py-2 text-sm"
+              >
+                <option value="reviews">Değerlendirme Sayısı</option>
+                <option value="rating">Ortalama Puan</option>
+                <option value="badges">Rozet Sayısı</option>
+              </select>
+            </div>
+
+            {/* My position highlight */}
+            <div className="bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-950/30 dark:to-pink-950/30 border-2 border-purple-300 dark:border-purple-700 rounded-xl p-4">
+              <div className="flex items-center gap-4">
+                <div className="flex flex-col items-center w-10">
+                  <span className="w-8 h-8 flex items-center justify-center text-lg font-bold text-purple-600 bg-purple-100 rounded-full">3</span>
+                </div>
+                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-orange-400 to-red-500 flex items-center justify-center text-white text-lg font-bold">
+                  B
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h3 className="font-semibold">Sen</h3>
+                  <p className="text-sm text-muted-foreground">@bugragazioglu</p>
+                  <span className="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded">Kendi sıralamanız</span>
+                </div>
+                <div className="text-right shrink-0">
+                  <p className="font-semibold">128</p>
+                  <p className="text-xs text-muted-foreground">değerlendirme</p>
+                  <div className="flex items-center gap-1 justify-end mt-1">
+                    <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
+                    <span className="text-sm">4.5</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Friends list */}
+            <div className="space-y-3">
+              {sortedFriends.map((friend) => (
+                <div
+                  key={friend.id}
+                  className="flex items-center gap-4 bg-card border rounded-xl p-4 hover:shadow-md transition-shadow"
+                >
+                  {/* Rank */}
+                  <div className="flex flex-col items-center w-10">
+                    {getRankIcon(friend.rank)}
+                    {getChangeIndicator(friend.change)}
+                  </div>
+
+                  {/* Avatar */}
+                  <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center text-white text-lg font-bold shrink-0">
+                    {friend.displayName[0]}
+                  </div>
+
+                  {/* Info */}
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-semibold truncate">{friend.displayName}</h3>
+                    <p className="text-sm text-muted-foreground">@{friend.username}</p>
+                    <div className="flex items-center gap-2 mt-1">
+                      <span className="text-xs bg-muted px-2 py-0.5 rounded">❤️ {friend.favoriteCategory}</span>
+                      <span className="text-xs bg-muted px-2 py-0.5 rounded">🏅 {friend.badges} rozet</span>
+                    </div>
+                  </div>
+
+                  {/* Stats */}
+                  <div className="text-right shrink-0">
+                    <p className="font-semibold">{friend.reviewCount}</p>
+                    <p className="text-xs text-muted-foreground">değerlendirme</p>
+                    <div className="flex items-center gap-1 justify-end mt-1">
+                      <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
+                      <span className="text-sm">{friend.avgRating}</span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Leaderboard List - venues/items only */}
+        {tab !== 'friends' && (
         <div className="space-y-3">
           {tab === 'venues' ? (
             TOP_VENUES
@@ -290,6 +420,7 @@ export default function LeaderboardPage() {
               ))
           )}
         </div>
+        )}
 
         {/* Top Users Section */}
         <div className="mt-8">

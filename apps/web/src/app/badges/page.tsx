@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
   Utensils, MapPin, Star, Award, User, Loader2,
-  ChevronLeft, TrendingUp, Lock
+  ChevronLeft, TrendingUp, Lock, Home, Compass, Trophy, BookOpen
 } from 'lucide-react';
 import { useAuthStore } from '@/stores/auth-store';
 import {
@@ -317,21 +317,25 @@ export default function BadgesPage() {
       )}
 
       {/* Mobile Bottom Navigation */}
-      <nav className="fixed bottom-0 left-0 right-0 bg-white border-t md:hidden z-40">
-        <div className="flex justify-around py-2">
-          <Link href="/feed" className="flex flex-col items-center py-2 px-4 text-muted-foreground">
-            <Utensils className="h-5 w-5" />
+      <nav className="lg:hidden fixed bottom-0 left-0 right-0 bg-background border-t z-50">
+        <div className="flex items-center justify-around py-3">
+          <Link href="/feed" className="flex flex-col items-center text-muted-foreground">
+            <Home className="h-5 w-5" />
             <span className="text-xs mt-1">Akış</span>
           </Link>
-          <Link href="/explore" className="flex flex-col items-center py-2 px-4 text-muted-foreground">
-            <MapPin className="h-5 w-5" />
+          <Link href="/explore" className="flex flex-col items-center text-muted-foreground">
+            <Compass className="h-5 w-5" />
             <span className="text-xs mt-1">Keşfet</span>
           </Link>
-          <Link href="/leaderboard" className="flex flex-col items-center py-2 px-4 text-muted-foreground">
-            <TrendingUp className="h-5 w-5" />
+          <Link href="/nearby" className="flex flex-col items-center text-muted-foreground">
+            <MapPin className="h-5 w-5" />
+            <span className="text-xs mt-1">Yakında</span>
+          </Link>
+          <Link href="/leaderboard" className="flex flex-col items-center text-muted-foreground">
+            <Trophy className="h-5 w-5" />
             <span className="text-xs mt-1">Sıralama</span>
           </Link>
-          <Link href="/profile" className="flex flex-col items-center py-2 px-4 text-primary">
+          <Link href="/profile" className="flex flex-col items-center text-muted-foreground">
             <User className="h-5 w-5" />
             <span className="text-xs mt-1">Profil</span>
           </Link>
