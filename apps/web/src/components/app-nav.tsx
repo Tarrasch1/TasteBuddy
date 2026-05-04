@@ -1,17 +1,55 @@
 'use client';
 
+import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
   Home, Compass, MapPin, Trophy, Bell, User, Utensils, BookOpen, Search,
+  Star, Heart, Award, MessageCircle, ChevronRight, X, Check,
 } from 'lucide-react';
+import { formatDistanceToNow } from 'date-fns';
+import { tr } from 'date-fns/locale';
+
+/* ---------- Notification types & demo data ---------- */
+
+interface Notification {
+  id: string;
+  type: 'like' | 'comment' | 'follow' | 'badge' | 'review' | 'mention';
+  title: string;
+  body: string;
+  avatarLetter: string;
+  avatarColor: string;
+  read: boolean;
+  createdAt: string;       // ISO string
+  href?: string;           // optional deep link
+}
+
+const DEMO_NOTIFICATIONS: Notification[] = [
+  { id: 'n1', type: 'like', title: 'Beğeni', body: 'Ahmet S. senin Çiya Sofrası değerlendirmeni beğendi.', avatarLetter: 'A', avatarColor: 'from-blue-400 to-blue-600', read: false, createdAt: new Date(Date.now() - 1000 * 60 * 5).toISOString(), href: '/venues/ciya-sofrasi' },
+  { id: 'n2', type: 'comment', title: 'Yorum', body: 'Zeynep K. değerlendirmene yorum yaptı: "Harika bir yer, teşekkürler!"', avatarLetter: 'Z', avatarColor: 'from-pink-400 to-rose-600', read: false, createdAt: new Date(Date.now() - 1000 * 60 * 30).toISOString() },
+  { id: 'n3', type: 'badge', title: 'Yeni Rozet', body: '"Gurme Kaşif" rozetini kazandın! 🎉', avatarLetter: '🏅', avatarColor: 'from-amber-400 to-orange-500', read: false, createdAt: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString(), href: '/badges' },
+  { id: 'n4', type: 'follow', title: 'Takip', body: 'Mehmet Y. seni takip etmeye başladı.', avatarLetter: 'M', avatarColor: 'from-green-400 to-emerald-600', read: true, createdAt: new Date(Date.now() - 1000 * 60 * 60 * 5).toISOString(), href: '/profile' },
+  { id: 'n5', type: 'review', title: 'Değerlendirme', body: 'Arkadaşın Elif D. Karaköy Güllüoğlu\'nu değerlendirdi.', avatarLetter: 'E', avatarColor: 'from-purple-400 to-violet-600', read: true, createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString(), href: '/venues/karakoy-gulluoglu' },
+  { id: 'n6', type: 'mention', title: 'Bahsetme', body: 'Can B. senden bir yorumda bahsetti.', avatarLetter: 'C', avatarColor: 'from-teal-400 to-cyan-600', read: true, createdAt: new Date(Date.now() - 1000 * 60 * 60 * 48).toISOString() },
+];
+
+const NOTIF_ICON: Record<Notification['type'], React.ElementType> = {
+  like: Heart,
+  comment: MessageCircle,
+  follow: User,
+  badge: Award,
+  review: Star,
+  mention: MessageCircle,
+};
+
+/* ---------- Nav item arrays ---------- */
 
 const NAV_ITEMS = [
   { href: '/feed', icon: Home, label: 'Akış' },
   { href: '/explore', icon: Compass, label: 'Keşfet' },
   { href: '/daily-guide', icon: BookOpen, label: 'Rehber' },
   { href: '/leaderboard', icon: Trophy, label: 'Sıralama' },
-  { href: '/dashboard/notifications', icon: Bell, label: 'Bildirimler', badge: true },
+  // Bell handled separately
   { href: '/dashboard/profile', icon: User, label: 'Profil' },
 ];
 
@@ -23,12 +61,144 @@ const BOTTOM_NAV_ITEMS = [
   { href: '/dashboard/profile', icon: User, label: 'Profil' },
 ];
 
+/* ---------- Notification Popup ---------- */
+
+function NotificationPopup({
+  open,
+  onClose,
+  notifications,
+  onMarkAllRead,
+}: {
+  open: boolean;
+  onClose: () => void;
+  notifications: Notification[];
+  onMarkAllRead: () => void;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+
+  // Close on outside click
+  useEffect(() => {
+    if (!open) return;
+    function handler(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) onClose();
+    }
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [open, onClose]);
+
+  if (!open) return null;
+
+  const unreadCount = notifications.filter((n) => !n.read).length;
+
+  return (
+    <div
+      ref={ref}
+      className="absolute right-0 top-full mt-2 w-[360px] max-h-[480px] bg-background border rounded-xl shadow-xl z-[999] flex flex-col overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200"
+    >
+      {/* Header */}
+      <div className="flex items-center justify-between px-4 py-3 border-b">
+        <div className="flex items-center gap-2">
+          <Bell className="h-5 w-5 text-primary" />
+          <span className="font-semibold">Bildirimler</span>
+          {unreadCount > 0 && (
+            <span className="bg-red-500 text-white text-xs font-bold rounded-full px-1.5 py-0.5 min-w-[20px] text-center">
+              {unreadCount}
+            </span>
+          )}
+        </div>
+        <div className="flex items-center gap-1">
+          {unreadCount > 0 && (
+            <button
+              onClick={onMarkAllRead}
+              className="text-xs text-primary hover:underline px-2 py-1 rounded-lg hover:bg-muted transition-colors"
+              title="Tümünü okundu işaretle"
+            >
+              <Check className="h-4 w-4 inline mr-1" />
+              Tümü okundu
+            </button>
+          )}
+          <button onClick={onClose} className="p-1 hover:bg-muted rounded-lg transition-colors">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+      </div>
+
+      {/* List */}
+      <div className="flex-1 overflow-y-auto divide-y">
+        {notifications.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
+            <Bell className="h-10 w-10 mb-3 opacity-30" />
+            <p className="text-sm">Henüz bildirim yok</p>
+          </div>
+        ) : (
+          notifications.map((n) => {
+            const TypeIcon = NOTIF_ICON[n.type];
+            const Wrapper = n.href ? Link : 'div';
+            const wrapperProps = n.href ? { href: n.href, onClick: onClose } : {};
+            return (
+              <Wrapper
+                key={n.id}
+                {...(wrapperProps as any)}
+                className={`flex items-start gap-3 px-4 py-3 hover:bg-muted/50 transition-colors cursor-pointer ${
+                  !n.read ? 'bg-primary/5' : ''
+                }`}
+              >
+                {/* Avatar */}
+                <div
+                  className={`w-10 h-10 rounded-full bg-gradient-to-br ${n.avatarColor} flex items-center justify-center text-white text-sm font-semibold shrink-0`}
+                >
+                  {n.avatarLetter}
+                </div>
+                {/* Content */}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-1.5 mb-0.5">
+                    <TypeIcon className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                    <span className="text-xs font-medium text-muted-foreground">{n.title}</span>
+                  </div>
+                  <p className="text-sm leading-snug line-clamp-2">{n.body}</p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {formatDistanceToNow(new Date(n.createdAt), { addSuffix: true, locale: tr })}
+                  </p>
+                </div>
+                {/* Unread dot */}
+                {!n.read && (
+                  <span className="w-2.5 h-2.5 bg-primary rounded-full shrink-0 mt-1" />
+                )}
+              </Wrapper>
+            );
+          })
+        )}
+      </div>
+
+      {/* Footer */}
+      <Link
+        href="/dashboard/notifications"
+        onClick={onClose}
+        className="flex items-center justify-center gap-1 px-4 py-3 border-t text-sm font-medium text-primary hover:bg-muted/50 transition-colors"
+      >
+        Tüm bildirimleri gör
+        <ChevronRight className="h-4 w-4" />
+      </Link>
+    </div>
+  );
+}
+
+/* ---------- AppTopNav ---------- */
+
 export function AppTopNav() {
   const pathname = usePathname();
+  const [notifications, setNotifications] = useState<Notification[]>(DEMO_NOTIFICATIONS);
+  const [showNotifs, setShowNotifs] = useState(false);
+
+  const unreadCount = notifications.filter((n) => !n.read).length;
 
   const isActive = (href: string) => {
     if (href === '/feed') return pathname === '/feed';
     return pathname.startsWith(href);
+  };
+
+  const handleMarkAllRead = () => {
+    setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
   };
 
   return (
@@ -67,12 +237,34 @@ export function AppTopNav() {
                 title={item.label}
               >
                 <Icon className="h-5 w-5" />
-                {item.badge && (
-                  <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full" />
-                )}
               </Link>
             );
           })}
+
+          {/* Bell / Notification button — popup instead of page navigation */}
+          <div className="relative">
+            <button
+              onClick={() => setShowNotifs((v) => !v)}
+              className={`p-2 rounded-lg transition-colors relative ${
+                showNotifs
+                  ? 'text-primary bg-primary/5'
+                  : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+              }`}
+              title="Bildirimler"
+            >
+              <Bell className="h-5 w-5" />
+              {unreadCount > 0 && (
+                <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full" />
+              )}
+            </button>
+
+            <NotificationPopup
+              open={showNotifs}
+              onClose={() => setShowNotifs(false)}
+              notifications={notifications}
+              onMarkAllRead={handleMarkAllRead}
+            />
+          </div>
         </div>
       </div>
     </header>
