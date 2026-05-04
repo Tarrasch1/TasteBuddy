@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { useAuthStore } from '@/stores/auth-store';
 import { toast } from 'sonner';
+import { DashboardSidebar } from '@/components/dashboard-sidebar';
 
 const DEMO_USER_REVIEWS = [
   { id: '1', venueName: 'Karadeniz Pide', venueSlug: 'karadeniz-pide', rating: 5, category: 'pide', createdAt: '2024-04-10' },
@@ -39,7 +40,7 @@ const CATEGORY_LABELS: Record<string, { label: string; icon: string; color: stri
 
 export default function DashboardPage() {
   const router = useRouter();
-  const { user, isAuthenticated, logout, hasHydrated } = useAuthStore();
+  const { user, isAuthenticated, hasHydrated } = useAuthStore();
   const [isLoading, setIsLoading] = useState(true);
   const [reviews, setReviews] = useState<any[]>([]);
   const [stats, setStats] = useState({
@@ -74,8 +75,6 @@ export default function DashboardPage() {
     setIsLoading(false);
   };
 
-  const handleLogout = () => { logout(); toast.success('Başarıyla çıkış yapıldı'); router.push('/'); };
-
   const ratingDistribution = [5, 4, 3, 2, 1].map(rating => ({
     rating, count: reviews.filter(r => r.rating === rating).length,
     percent: reviews.length > 0 ? Math.round((reviews.filter(r => r.rating === rating).length / reviews.length) * 100) : 0,
@@ -102,24 +101,7 @@ export default function DashboardPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <aside className="fixed left-0 top-0 h-full w-64 border-r bg-card hidden lg:block">
-        <div className="p-4 border-b"><Link href="/" className="flex items-center gap-2"><Utensils className="h-6 w-6 text-primary" /><span className="text-xl font-bold">TasteBuddy</span></Link></div>
-        <nav className="p-4 space-y-2">
-          <NavLink href="/dashboard" icon={<BarChart3 />} label="Analizlerim" active />
-          <NavLink href="/feed" icon={<TrendingUp />} label="Akış" />
-          <NavLink href="/explore" icon={<MapPin />} label="Keşfet" />
-          <NavLink href="/dashboard/saved" icon={<Heart />} label="Kaydedilenler" />
-          <NavLink href="/dashboard/friends" icon={<Users />} label="Arkadaşlar" />
-          <NavLink href="/dashboard/notifications" icon={<Bell />} label="Bildirimler" />
-          <NavLink href="/profile" icon={<User />} label="Profil" />
-          <NavLink href="/dashboard/settings" icon={<Settings />} label="Ayarlar" />
-        </nav>
-        <div className="absolute bottom-0 left-0 right-0 p-4 border-t">
-          <button onClick={handleLogout} className="flex items-center gap-3 w-full px-4 py-2 text-muted-foreground hover:text-foreground rounded-lg hover:bg-muted transition-colors">
-            <LogOut className="h-5 w-5" />Çıkış Yap
-          </button>
-        </div>
-      </aside>
+      <DashboardSidebar />
 
       <main className="lg:ml-64">
         <header className="border-b bg-white/50 backdrop-blur-sm sticky top-0 z-50">
@@ -206,10 +188,6 @@ export default function DashboardPage() {
       </main>
     </div>
   );
-}
-
-function NavLink({ href, icon, label, active = false }: { href: string; icon: React.ReactNode; label: string; active?: boolean; }) {
-  return (<Link href={href} className={`flex items-center gap-3 px-4 py-2 rounded-lg transition-colors ${active ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:text-foreground hover:bg-muted'}`}><span className="[&>svg]:h-5 [&>svg]:w-5">{icon}</span>{label}</Link>);
 }
 
 function StatCard({ label, value, icon, color, suffix = '' }: { label: string; value: number; icon: React.ReactNode; color: string; suffix?: string; }) {

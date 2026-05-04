@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { useAuthStore } from '@/stores/auth-store';
 import { toast } from 'sonner';
+import { DashboardSidebar } from '@/components/dashboard-sidebar';
 
 interface ProfileForm {
   displayName: string;
@@ -26,7 +27,7 @@ interface PasswordForm {
 
 export default function SettingsPage() {
   const router = useRouter();
-  const { user, isAuthenticated, hasHydrated, logout, setUser } = useAuthStore();
+  const { user, isAuthenticated, hasHydrated, setUser } = useAuthStore();
   const [activeSection, setActiveSection] = useState<'profile' | 'password' | 'notifications' | 'privacy' | 'danger'>('profile');
   const [isLoading, setIsLoading] = useState(false);
   const [theme, setTheme] = useState<'light' | 'dark' | 'system'>('system');
@@ -113,11 +114,6 @@ export default function SettingsPage() {
     }
   };
 
-  const handleLogout = () => {
-    logout();
-    router.push('/');
-  };
-
   if (!hasHydrated || !isAuthenticated) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -129,34 +125,7 @@ export default function SettingsPage() {
   return (
     <div className="min-h-screen bg-background">
       {/* Sidebar */}
-      <aside className="fixed left-0 top-0 h-full w-64 border-r bg-card hidden lg:block">
-        <div className="p-4 border-b">
-          <Link href="/" className="flex items-center gap-2">
-            <Utensils className="h-6 w-6 text-primary" />
-            <span className="text-xl font-bold">TasteBuddy</span>
-          </Link>
-        </div>
-        
-        <nav className="p-4 space-y-2">
-          <NavLink href="/dashboard" icon={<TrendingUp />} label="Akış" />
-          <NavLink href="/explore" icon={<MapPin />} label="Keşfet" />
-          <NavLink href="/dashboard/saved" icon={<Heart />} label="Kaydedilenler" />
-          <NavLink href="/dashboard/friends" icon={<Users />} label="Arkadaşlar" />
-          <NavLink href="/dashboard/notifications" icon={<Bell />} label="Bildirimler" />
-          <NavLink href="/dashboard/profile" icon={<User />} label="Profil" />
-          <NavLink href="/dashboard/settings" icon={<Settings />} label="Ayarlar" active />
-        </nav>
-        
-        <div className="absolute bottom-0 left-0 right-0 p-4 border-t">
-          <button
-            onClick={handleLogout}
-            className="flex items-center gap-3 w-full px-4 py-2 text-muted-foreground hover:text-foreground rounded-lg hover:bg-muted transition-colors"
-          >
-            <LogOut className="h-5 w-5" />
-            Çıkış Yap
-          </button>
-        </div>
-      </aside>
+      <DashboardSidebar />
 
       {/* Main Content */}
       <main className="lg:ml-64">
@@ -392,31 +361,5 @@ export default function SettingsPage() {
         </div>
       </main>
     </div>
-  );
-}
-
-function NavLink({ 
-  href, 
-  icon, 
-  label, 
-  active = false 
-}: { 
-  href: string; 
-  icon: React.ReactNode; 
-  label: string; 
-  active?: boolean; 
-}) {
-  return (
-    <Link
-      href={href}
-      className={`flex items-center gap-3 px-4 py-2 rounded-lg transition-colors ${
-        active 
-          ? 'bg-primary/10 text-primary' 
-          : 'text-muted-foreground hover:text-foreground hover:bg-muted'
-      }`}
-    >
-      <span className="[&>svg]:h-5 [&>svg]:w-5">{icon}</span>
-      {label}
-    </Link>
   );
 }
