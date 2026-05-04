@@ -2,13 +2,16 @@
 
 import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import {
   Home, Compass, MapPin, Trophy, Bell, User, Utensils, BookOpen, Search,
   Star, Heart, Award, MessageCircle, ChevronRight, X, Check,
+  BarChart3, Settings, LogOut, Users, Bookmark,
 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { tr } from 'date-fns/locale';
+import { useAuthStore } from '@/stores/auth-store';
+import { toast } from 'sonner';
 
 /* ---------- Notification types & demo data ---------- */
 
@@ -49,8 +52,7 @@ const NAV_ITEMS = [
   { href: '/explore', icon: Compass, label: 'Keşfet' },
   { href: '/daily-guide', icon: BookOpen, label: 'Rehber' },
   { href: '/leaderboard', icon: Trophy, label: 'Sıralama' },
-  // Bell handled separately
-  { href: '/dashboard/profile', icon: User, label: 'Profil' },
+  // Bell & Profile handled separately as popups
 ];
 
 const BOTTOM_NAV_ITEMS = [
@@ -58,7 +60,15 @@ const BOTTOM_NAV_ITEMS = [
   { href: '/explore', icon: Compass, label: 'Keşfet' },
   { href: '/nearby', icon: MapPin, label: 'Yakında' },
   { href: '/leaderboard', icon: Trophy, label: 'Sıralama' },
-  { href: '/dashboard/profile', icon: User, label: 'Profil' },
+  { href: '/profile', icon: User, label: 'Profil' },
+];
+
+const PROFILE_MENU_ITEMS = [
+  { href: '/profile', icon: User, label: 'Profilim' },
+  { href: '/dashboard', icon: BarChart3, label: 'Analizlerim' },
+  { href: '/dashboard/saved', icon: Bookmark, label: 'Kaydedilenler' },
+  { href: '/dashboard/friends', icon: Users, label: 'Arkadaşlar' },
+  { href: '/dashboard/settings', icon: Settings, label: 'Ayarlar' },
 ];
 
 /* ---------- Notification Popup ---------- */
@@ -183,12 +193,94 @@ function NotificationPopup({
   );
 }
 
+/* ---------- Profile Menu Popup ---------- */
+
+function ProfileMenuPopup({
+  open,
+  onClose,
+}: {
+  open: boolean;
+  onClose: () => void;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+  const router = useRouter();
+  const { user, logout } = useAuthStore();
+
+  useEffect(() => {
+    if (!open) return;
+    function handler(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) onClose();
+    }
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [open, onClose]);
+
+  if (!open) return null;
+
+  const handleLogout = () => {
+    logout();
+    toast.success('Başarıyla çıkış yapıldı');
+    onClose();
+    router.push('/');
+  };
+
+  return (
+    <div
+      ref={ref}
+      className="absolute right-0 top-full mt-2 w-[240px] bg-background border rounded-xl shadow-xl z-[999] flex flex-col overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200"
+    >
+      {/* User Info */}
+      <div className="px-4 py-3 border-b">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 bg-gradient-to-br from-orange-400 to-red-500 rounded-full flex items-center justify-center text-white font-bold">
+            {user?.displayName?.[0]?.toUpperCase() || 'U'}
+          </div>
+          <div className="min-w-0">
+            <p className="font-semibold text-sm truncate">{user?.displayName || 'Kullanıcı'}</p>
+            <p className="text-xs text-muted-foreground truncate">@{user?.username || 'user'}</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Menu Items */}
+      <div className="py-1">
+        {PROFILE_MENU_ITEMS.map((item) => {
+          const Icon = item.icon;
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              onClick={onClose}
+              className="flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-muted transition-colors"
+            >
+              <Icon className="h-4 w-4 text-muted-foreground" />
+              {item.label}
+            </Link>
+          );
+        })}
+      </div>
+
+      {/* Logout */}
+      <div className="border-t py-1">
+        <button
+          onClick={handleLogout}
+          className="flex items-center gap-3 px-4 py-2.5 text-sm text-red-500 hover:bg-red-50 dark:hover:bg-red-950/20 transition-colors w-full"
+        >
+          <LogOut className="h-4 w-4" />
+          Çıkış Yap
+        </button>
+      </div>
+    </div>
+  );
+}
+
 /* ---------- AppTopNav ---------- */
 
 export function AppTopNav() {
   const pathname = usePathname();
   const [notifications, setNotifications] = useState<Notification[]>(DEMO_NOTIFICATIONS);
   const [showNotifs, setShowNotifs] = useState(false);
+  const [showProfile, setShowProfile] = useState(false);
 
   const unreadCount = notifications.filter((n) => !n.read).length;
 
@@ -196,6 +288,8 @@ export function AppTopNav() {
     if (href === '/feed') return pathname === '/feed';
     return pathname.startsWith(href);
   };
+
+  const profileActive = pathname === '/profile' || pathname.startsWith('/dashboard');
 
   const handleMarkAllRead = () => {
     setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
@@ -244,7 +338,7 @@ export function AppTopNav() {
           {/* Bell / Notification button — popup instead of page navigation */}
           <div className="relative">
             <button
-              onClick={() => setShowNotifs((v) => !v)}
+              onClick={() => { setShowNotifs((v) => !v); setShowProfile(false); }}
               className={`p-2 rounded-lg transition-colors relative ${
                 showNotifs
                   ? 'text-primary bg-primary/5'
@@ -263,6 +357,26 @@ export function AppTopNav() {
               onClose={() => setShowNotifs(false)}
               notifications={notifications}
               onMarkAllRead={handleMarkAllRead}
+            />
+          </div>
+
+          {/* Profile button — dropdown menu */}
+          <div className="relative">
+            <button
+              onClick={() => { setShowProfile((v) => !v); setShowNotifs(false); }}
+              className={`p-2 rounded-lg transition-colors relative ${
+                showProfile || profileActive
+                  ? 'text-primary bg-primary/5'
+                  : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+              }`}
+              title="Profil"
+            >
+              <User className="h-5 w-5" />
+            </button>
+
+            <ProfileMenuPopup
+              open={showProfile}
+              onClose={() => setShowProfile(false)}
             />
           </div>
         </div>
