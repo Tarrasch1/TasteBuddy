@@ -7,6 +7,7 @@ import {
   Utensils, MapPin, Star, Award, User, Loader2,
   ChevronLeft, TrendingUp, Lock, Home, Compass, Trophy, BookOpen
 } from 'lucide-react';
+import { AppTopNav, AppBottomNav } from '@/components/app-nav';
 import { useAuthStore } from '@/stores/auth-store';
 import {
   BADGES, DEMO_USER_BADGES, DEMO_BADGE_PROGRESS,
@@ -71,21 +72,7 @@ export default function BadgesPage() {
 
   return (
     <div className="min-h-screen bg-background pb-20 md:pb-6">
-      {/* Header */}
-      <header className="border-b bg-white/50 backdrop-blur-sm sticky top-0 z-50">
-        <div className="max-w-4xl mx-auto px-4 h-14 flex items-center gap-4">
-          <button
-            onClick={() => router.back()}
-            className="p-2 hover:bg-muted rounded-full transition-colors"
-          >
-            <ChevronLeft className="h-5 w-5" />
-          </button>
-          <h1 className="font-bold flex items-center gap-2">
-            <Award className="h-5 w-5 text-primary" />
-            Rozetler
-          </h1>
-        </div>
-      </header>
+      <AppTopNav />
 
       <main className="max-w-4xl mx-auto px-4 py-6">
         {/* Stats */}
@@ -316,31 +303,7 @@ export default function BadgesPage() {
         </div>
       )}
 
-      {/* Mobile Bottom Navigation */}
-      <nav className="lg:hidden fixed bottom-0 left-0 right-0 bg-background border-t z-50">
-        <div className="flex items-center justify-around py-3">
-          <Link href="/feed" className="flex flex-col items-center text-muted-foreground">
-            <Home className="h-5 w-5" />
-            <span className="text-xs mt-1">Akış</span>
-          </Link>
-          <Link href="/explore" className="flex flex-col items-center text-muted-foreground">
-            <Compass className="h-5 w-5" />
-            <span className="text-xs mt-1">Keşfet</span>
-          </Link>
-          <Link href="/nearby" className="flex flex-col items-center text-muted-foreground">
-            <MapPin className="h-5 w-5" />
-            <span className="text-xs mt-1">Yakında</span>
-          </Link>
-          <Link href="/leaderboard" className="flex flex-col items-center text-muted-foreground">
-            <Trophy className="h-5 w-5" />
-            <span className="text-xs mt-1">Sıralama</span>
-          </Link>
-          <Link href="/profile" className="flex flex-col items-center text-muted-foreground">
-            <User className="h-5 w-5" />
-            <span className="text-xs mt-1">Profil</span>
-          </Link>
-        </div>
-      </nav>
+      <AppBottomNav />
     </div>
   );
 }

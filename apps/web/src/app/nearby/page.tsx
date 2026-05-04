@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo, useCallback } from 'react';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
 import { MapPin, Star, Loader2, Navigation, ChevronLeft, Map, List, RefreshCw, Wifi, WifiOff, Search, Home, Compass, Trophy, User, BookOpen } from 'lucide-react';
+import { AppTopNav, AppBottomNav } from '@/components/app-nav';
 import { toast } from 'sonner';
 import { searchOSMVenues, transformOSMVenue, TransformedVenue } from '@/services/openstreetmap';
 import { getCurrentLocation, LocationCoords, calculateDistance, formatDistance, clearLocationCache } from '@/services/location';
@@ -250,12 +251,10 @@ export default function NearbyPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <header className="border-b bg-white/50 backdrop-blur-sm sticky top-0 z-50">
-        <div className="container mx-auto px-4 h-16 flex items-center justify-between">
-          <Link href="/explore" className="flex items-center gap-2 text-muted-foreground hover:text-foreground">
-            <ChevronLeft className="h-5 w-5" />
-            Geri
-          </Link>
+      <AppTopNav />
+      {/* Page Controls */}
+      <div className="border-b bg-white/50 backdrop-blur-sm sticky top-14 z-40">
+        <div className="container mx-auto px-4 h-12 flex items-center justify-between">
           <h1 className="text-lg font-semibold">Yakınımdaki Mekanlar</h1>
           <div className="flex items-center gap-2">
             <button
@@ -290,7 +289,7 @@ export default function NearbyPage() {
             </div>
           </div>
         </div>
-      </header>
+      </div>
 
       <main className="container mx-auto px-4 py-6">
         {/* Location Permission Prompt */}
@@ -573,31 +572,7 @@ export default function NearbyPage() {
         )}
       </main>
 
-      {/* Mobile Bottom Navigation */}
-      <nav className="lg:hidden fixed bottom-0 left-0 right-0 bg-background border-t z-50">
-        <div className="flex items-center justify-around py-3">
-          <Link href="/feed" className="flex flex-col items-center text-muted-foreground">
-            <Home className="h-5 w-5" />
-            <span className="text-xs mt-1">Akış</span>
-          </Link>
-          <Link href="/explore" className="flex flex-col items-center text-muted-foreground">
-            <Compass className="h-5 w-5" />
-            <span className="text-xs mt-1">Keşfet</span>
-          </Link>
-          <Link href="/nearby" className="flex flex-col items-center text-primary">
-            <MapPin className="h-5 w-5" />
-            <span className="text-xs mt-1">Yakında</span>
-          </Link>
-          <Link href="/leaderboard" className="flex flex-col items-center text-muted-foreground">
-            <Trophy className="h-5 w-5" />
-            <span className="text-xs mt-1">Sıralama</span>
-          </Link>
-          <Link href="/dashboard/profile" className="flex flex-col items-center text-muted-foreground">
-            <User className="h-5 w-5" />
-            <span className="text-xs mt-1">Profil</span>
-          </Link>
-        </div>
-      </nav>
+      <AppBottomNav />
     </div>
   );
 }

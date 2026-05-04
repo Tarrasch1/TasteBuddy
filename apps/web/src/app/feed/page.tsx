@@ -10,6 +10,7 @@ import {
   Bell, Search, Home, Compass, Trophy, User, ChevronRight,
   ThumbsUp, Send, X, Plus, BookOpen
 } from 'lucide-react';
+import { AppTopNav, AppBottomNav } from '@/components/app-nav';
 import { useAuthStore } from '@/stores/auth-store';
 import { toast } from 'sonner';
 import { formatDistanceToNow } from 'date-fns';
@@ -416,46 +417,7 @@ export default function FeedPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Top Navigation */}
-      <header className="sticky top-0 z-50 bg-background/95 backdrop-blur border-b">
-        <div className="container mx-auto px-4 h-16 flex items-center justify-between">
-          <Link href="/feed" className="flex items-center gap-2">
-            <Utensils className="h-6 w-6 text-primary" />
-            <span className="text-xl font-bold">TasteBuddy</span>
-          </Link>
-
-          <div className="hidden md:flex items-center gap-1 bg-muted rounded-full px-4 py-2">
-            <Search className="h-4 w-4 text-muted-foreground" />
-            <input
-              type="text"
-              placeholder="Mekan, yemek veya kullanıcı ara..."
-              className="bg-transparent border-none outline-none text-sm w-64"
-            />
-          </div>
-
-          <div className="flex items-center gap-4">
-            <Link href="/feed" className="p-2 hover:bg-muted rounded-lg text-primary">
-              <Home className="h-5 w-5" />
-            </Link>
-            <Link href="/explore" className="p-2 hover:bg-muted rounded-lg text-muted-foreground hover:text-foreground">
-              <Compass className="h-5 w-5" />
-            </Link>
-            <Link href="/daily-guide" className="p-2 hover:bg-muted rounded-lg text-muted-foreground hover:text-foreground" title="Günlük Rehber">
-              <BookOpen className="h-5 w-5" />
-            </Link>
-            <Link href="/leaderboard" className="p-2 hover:bg-muted rounded-lg text-muted-foreground hover:text-foreground">
-              <Trophy className="h-5 w-5" />
-            </Link>
-            <Link href="/dashboard/notifications" className="p-2 hover:bg-muted rounded-lg text-muted-foreground hover:text-foreground relative">
-              <Bell className="h-5 w-5" />
-              <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
-            </Link>
-            <Link href="/dashboard/profile" className="p-2 hover:bg-muted rounded-lg text-muted-foreground hover:text-foreground">
-              <User className="h-5 w-5" />
-            </Link>
-          </div>
-        </div>
-      </header>
+      <AppTopNav />
 
       <main className="container mx-auto px-4 py-6">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
@@ -761,31 +723,7 @@ export default function FeedPage() {
         onSuccess={handleNewReview}
       />
 
-      {/* Mobile Bottom Navigation */}
-      <nav className="lg:hidden fixed bottom-0 left-0 right-0 bg-background border-t z-50">
-        <div className="flex items-center justify-around py-3">
-          <Link href="/feed" className="flex flex-col items-center text-primary">
-            <Home className="h-5 w-5" />
-            <span className="text-xs mt-1">Akış</span>
-          </Link>
-          <Link href="/explore" className="flex flex-col items-center text-muted-foreground">
-            <Compass className="h-5 w-5" />
-            <span className="text-xs mt-1">Keşfet</span>
-          </Link>
-          <Link href="/nearby" className="flex flex-col items-center text-muted-foreground">
-            <MapPin className="h-5 w-5" />
-            <span className="text-xs mt-1">Yakında</span>
-          </Link>
-          <Link href="/leaderboard" className="flex flex-col items-center text-muted-foreground">
-            <Trophy className="h-5 w-5" />
-            <span className="text-xs mt-1">Sıralama</span>
-          </Link>
-          <Link href="/dashboard/profile" className="flex flex-col items-center text-muted-foreground">
-            <User className="h-5 w-5" />
-            <span className="text-xs mt-1">Profil</span>
-          </Link>
-        </div>
-      </nav>
+      <AppBottomNav />
     </div>
   );
 }

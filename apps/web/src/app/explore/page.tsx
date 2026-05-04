@@ -7,6 +7,7 @@ import {
   Home, Compass, Trophy, User, ThumbsUp, ThumbsDown,
   RefreshCw, Loader2, BookOpen
 } from 'lucide-react';
+import { AppTopNav, AppBottomNav } from '@/components/app-nav';
 import { useAuthStore } from '@/stores/auth-store';
 import { toast } from 'sonner';
 
@@ -235,19 +236,7 @@ export default function ExplorePage() {
 
   return (
     <div className="min-h-screen bg-background pb-20 lg:pb-0">
-      {/* Header */}
-      <header className="sticky top-0 z-50 bg-background/95 backdrop-blur border-b">
-        <div className="container mx-auto px-4 h-16 flex items-center justify-between">
-          <Link href="/feed" className="flex items-center gap-2">
-            <Utensils className="h-6 w-6 text-primary" />
-            <span className="text-xl font-bold">TasteBuddy</span>
-          </Link>
-          <div className="flex items-center gap-2">
-            <Sparkles className="h-5 w-5 text-primary" />
-            <span className="font-semibold">Sana Özel</span>
-          </div>
-        </div>
-      </header>
+      <AppTopNav />
 
       <main className="container mx-auto px-4 py-6">
         {/* Hero */}
@@ -447,31 +436,7 @@ export default function ExplorePage() {
         </div>
       </main>
 
-      {/* Mobile Bottom Navigation */}
-      <nav className="lg:hidden fixed bottom-0 left-0 right-0 bg-background border-t z-50">
-        <div className="flex items-center justify-around py-3">
-          <Link href="/feed" className="flex flex-col items-center text-muted-foreground">
-            <Home className="h-5 w-5" />
-            <span className="text-xs mt-1">Akış</span>
-          </Link>
-          <Link href="/explore" className="flex flex-col items-center text-primary">
-            <Compass className="h-5 w-5" />
-            <span className="text-xs mt-1">Keşfet</span>
-          </Link>
-          <Link href="/nearby" className="flex flex-col items-center text-muted-foreground">
-            <MapPin className="h-5 w-5" />
-            <span className="text-xs mt-1">Yakında</span>
-          </Link>
-          <Link href="/leaderboard" className="flex flex-col items-center text-muted-foreground">
-            <Trophy className="h-5 w-5" />
-            <span className="text-xs mt-1">Sıralama</span>
-          </Link>
-          <Link href="/dashboard/profile" className="flex flex-col items-center text-muted-foreground">
-            <User className="h-5 w-5" />
-            <span className="text-xs mt-1">Profil</span>
-          </Link>
-        </div>
-      </nav>
+      <AppBottomNav />
     </div>
   );
 }
