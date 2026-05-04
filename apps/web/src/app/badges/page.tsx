@@ -71,7 +71,7 @@ export default function BadgesPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background pb-20 md:pb-6">
+    <div className="min-h-screen bg-background pb-20 lg:pb-6">
       <AppTopNav />
 
       <main className="max-w-4xl mx-auto px-4 py-6">

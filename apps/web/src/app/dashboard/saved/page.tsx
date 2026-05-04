@@ -108,11 +108,14 @@ export default function SavedPage() {
 
       {/* Main Content */}
       <main className="lg:ml-64">
-        <header className="border-b bg-white/50 backdrop-blur-sm sticky top-0 z-50">
+        <header className="border-b bg-white/50 backdrop-blur-sm hidden lg:block sticky top-0 z-30">
           <div className="px-4 md:px-8 h-16 flex items-center">
             <h1 className="text-xl font-bold">Kaydedilen Mekanlar</h1>
           </div>
         </header>
+        <div className="lg:hidden px-4 py-3 border-b">
+          <h1 className="text-lg font-bold">Kaydedilen Mekanlar</h1>
+        </div>
 
         <div className="p-4 md:p-8">
           {isLoading ? (

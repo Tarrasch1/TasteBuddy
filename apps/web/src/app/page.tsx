@@ -33,12 +33,12 @@ export default function HomePage() {
 
       {/* Hero Section */}
       <main className="flex-1">
-        <section className="py-20 px-4">
+        <section className="py-12 sm:py-20 px-4">
           <div className="container mx-auto text-center">
-            <h1 className="text-4xl md:text-6xl font-bold mb-6 bg-gradient-to-r from-orange-500 to-red-500 bg-clip-text text-transparent">
+            <h1 className="text-3xl sm:text-4xl md:text-6xl font-bold mb-4 sm:mb-6 bg-gradient-to-r from-orange-500 to-red-500 bg-clip-text text-transparent">
               Keşfet, Puanla & Paylaş
             </h1>
-            <p className="text-xl text-muted-foreground max-w-2xl mx-auto mb-10">
+            <p className="text-base sm:text-xl text-muted-foreground max-w-2xl mx-auto mb-8 sm:mb-10">
               Kişisel lezzet yolculuğun burada başlıyor. Sevdiğin yemekleri puanla, 
               gizli hazineleri keşfet ve lezzet maceralarını arkadaşlarınla paylaş.
             </p>

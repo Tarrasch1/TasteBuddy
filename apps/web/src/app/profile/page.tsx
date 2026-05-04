@@ -303,7 +303,7 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background pb-20 lg:pb-0">
       <AppTopNav />
 
       <main className="max-w-4xl mx-auto px-4 py-6">
@@ -426,10 +426,10 @@ export default function ProfilePage() {
         </div>
 
         {/* Tabs */}
-        <div className="flex border-b mb-6">
+        <div className="flex border-b mb-6 overflow-x-auto scrollbar-hide -mx-4 px-4">
           <button
             onClick={() => setActiveTab('reviews')}
-            className={`flex-1 py-3 text-center font-medium transition-colors ${
+            className={`flex-1 min-w-fit py-3 px-3 text-center text-sm sm:text-base font-medium transition-colors whitespace-nowrap ${
               activeTab === 'reviews'
                 ? 'text-primary border-b-2 border-primary'
                 : 'text-muted-foreground hover:text-foreground'
@@ -439,7 +439,7 @@ export default function ProfilePage() {
           </button>
           <button
             onClick={() => setActiveTab('map')}
-            className={`flex-1 py-3 text-center font-medium transition-colors ${
+            className={`flex-1 min-w-fit py-3 px-3 text-center text-sm sm:text-base font-medium transition-colors whitespace-nowrap ${
               activeTab === 'map'
                 ? 'text-primary border-b-2 border-primary'
                 : 'text-muted-foreground hover:text-foreground'
@@ -452,7 +452,7 @@ export default function ProfilePage() {
           </button>
           <button
             onClick={() => setActiveTab('badges')}
-            className={`flex-1 py-3 text-center font-medium transition-colors ${
+            className={`flex-1 min-w-fit py-3 px-3 text-center text-sm sm:text-base font-medium transition-colors whitespace-nowrap ${
               activeTab === 'badges'
                 ? 'text-primary border-b-2 border-primary'
                 : 'text-muted-foreground hover:text-foreground'
@@ -462,7 +462,7 @@ export default function ProfilePage() {
           </button>
           <button
             onClick={() => setActiveTab('saved')}
-            className={`flex-1 py-3 text-center font-medium transition-colors ${
+            className={`flex-1 min-w-fit py-3 px-3 text-center text-sm sm:text-base font-medium transition-colors whitespace-nowrap ${
               activeTab === 'saved'
                 ? 'text-primary border-b-2 border-primary'
                 : 'text-muted-foreground hover:text-foreground'

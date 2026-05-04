@@ -48,10 +48,10 @@ const NOTIF_ICON: Record<Notification['type'], React.ElementType> = {
 /* ---------- Nav item arrays ---------- */
 
 const NAV_ITEMS = [
-  { href: '/feed', icon: Home, label: 'Akış' },
-  { href: '/explore', icon: Compass, label: 'Keşfet' },
-  { href: '/daily-guide', icon: BookOpen, label: 'Rehber' },
-  { href: '/leaderboard', icon: Trophy, label: 'Sıralama' },
+  { href: '/feed', icon: Home, label: 'Akış', hideOnMobile: false },
+  { href: '/explore', icon: Compass, label: 'Keşfet', hideOnMobile: false },
+  { href: '/daily-guide', icon: BookOpen, label: 'Rehber', hideOnMobile: true },
+  { href: '/leaderboard', icon: Trophy, label: 'Sıralama', hideOnMobile: true },
   // Bell & Profile handled separately as popups
 ];
 
@@ -103,7 +103,7 @@ function NotificationPopup({
   return (
     <div
       ref={ref}
-      className="absolute right-0 top-full mt-2 w-[360px] max-h-[480px] bg-background border rounded-xl shadow-xl z-[999] flex flex-col overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200"
+      className="fixed right-2 left-2 sm:left-auto sm:absolute sm:right-0 top-[60px] sm:top-full sm:mt-2 sm:w-[360px] max-h-[70vh] sm:max-h-[480px] bg-background border rounded-xl shadow-xl z-[999] flex flex-col overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200"
     >
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 border-b">
@@ -227,7 +227,7 @@ function ProfileMenuPopup({
   return (
     <div
       ref={ref}
-      className="absolute right-0 top-full mt-2 w-[240px] bg-background border rounded-xl shadow-xl z-[999] flex flex-col overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200"
+      className="fixed right-2 left-2 sm:left-auto sm:absolute sm:right-0 top-[60px] sm:top-full sm:mt-2 sm:w-[240px] bg-background border rounded-xl shadow-xl z-[999] flex flex-col overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200"
     >
       {/* User Info */}
       <div className="px-4 py-3 border-b">
@@ -315,7 +315,7 @@ export function AppTopNav() {
         </div>
 
         {/* Nav Icons */}
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-0.5 sm:gap-1">
           {NAV_ITEMS.map((item) => {
             const Icon = item.icon;
             const active = isActive(item.href);
@@ -323,7 +323,9 @@ export function AppTopNav() {
               <Link
                 key={item.href}
                 href={item.href}
-                className={`p-2 rounded-lg transition-colors relative ${
+                className={`p-2.5 sm:p-2 rounded-lg transition-colors relative ${
+                  item.hideOnMobile ? 'hidden sm:flex' : 'flex'
+                } ${
                   active
                     ? 'text-primary bg-primary/5'
                     : 'text-muted-foreground hover:text-foreground hover:bg-muted'
@@ -339,7 +341,7 @@ export function AppTopNav() {
           <div className="relative">
             <button
               onClick={() => { setShowNotifs((v) => !v); setShowProfile(false); }}
-              className={`p-2 rounded-lg transition-colors relative ${
+              className={`p-2.5 sm:p-2 rounded-lg transition-colors relative ${
                 showNotifs
                   ? 'text-primary bg-primary/5'
                   : 'text-muted-foreground hover:text-foreground hover:bg-muted'
@@ -364,7 +366,7 @@ export function AppTopNav() {
           <div className="relative">
             <button
               onClick={() => { setShowProfile((v) => !v); setShowNotifs(false); }}
-              className={`p-2 rounded-lg transition-colors relative ${
+              className={`p-2.5 sm:p-2 rounded-lg transition-colors relative ${
                 showProfile || profileActive
                   ? 'text-primary bg-primary/5'
                   : 'text-muted-foreground hover:text-foreground hover:bg-muted'

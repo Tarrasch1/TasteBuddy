@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Utensils, User, LogOut, Settings, Bookmark, Bell } from 'lucide-react';
+import { Utensils, User, LogOut, Settings, Bookmark, Bell, Menu, X } from 'lucide-react';
 import { useAuthStore } from '@/stores/auth-store';
 import { useState, useEffect, useRef } from 'react';
 
@@ -14,6 +14,7 @@ export function Header({ showNav = true }: HeaderProps) {
   const router = useRouter();
   const { isAuthenticated, user, hasHydrated, logout } = useAuthStore();
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -134,7 +135,7 @@ export function Header({ showNav = true }: HeaderProps) {
 
   return (
     <header className="border-b bg-white/50 backdrop-blur-sm sticky top-0 z-50">
-      <nav className="container mx-auto px-4 h-16 flex items-center justify-between">
+      <nav className="container mx-auto px-4 h-14 sm:h-16 flex items-center justify-between">
         <Link href="/" className="flex items-center gap-2">
           <Utensils className="h-6 w-6 text-primary" />
           <span className="text-xl font-bold">TasteBuddy</span>
@@ -153,9 +154,49 @@ export function Header({ showNav = true }: HeaderProps) {
             </Link>
           </div>
         )}
-        
-        {renderAuthSection()}
+
+        <div className="flex items-center gap-2">
+          {renderAuthSection()}
+          {showNav && (
+            <button
+              className="md:hidden p-2 rounded-lg hover:bg-muted transition-colors"
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              aria-label="Menü"
+            >
+              {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+            </button>
+          )}
+        </div>
       </nav>
+
+      {/* Mobile nav menu */}
+      {showNav && mobileMenuOpen && (
+        <div className="md:hidden border-t bg-background">
+          <div className="container mx-auto px-4 py-3 flex flex-col gap-1">
+            <Link
+              href="/explore"
+              onClick={() => setMobileMenuOpen(false)}
+              className="px-3 py-2.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+            >
+              Keşfet
+            </Link>
+            <Link
+              href="/nearby"
+              onClick={() => setMobileMenuOpen(false)}
+              className="px-3 py-2.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+            >
+              Yakınımda
+            </Link>
+            <Link
+              href="/trending"
+              onClick={() => setMobileMenuOpen(false)}
+              className="px-3 py-2.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+            >
+              Popüler
+            </Link>
+          </div>
+        </div>
+      )}
     </header>
   );
 }

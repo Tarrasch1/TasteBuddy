@@ -148,7 +148,7 @@ export default function NotificationsPage() {
 
       {/* Main Content */}
       <main className="lg:ml-64">
-        <header className="border-b bg-white/50 backdrop-blur-sm sticky top-0 z-50">
+        <header className="border-b bg-white/50 backdrop-blur-sm hidden lg:block sticky top-0 z-30">
           <div className="px-4 md:px-8 h-16 flex items-center justify-between">
             <div className="flex items-center gap-3">
               <h1 className="text-xl font-bold">Bildirimler</h1>
@@ -169,6 +169,25 @@ export default function NotificationsPage() {
             )}
           </div>
         </header>
+        <div className="lg:hidden px-4 py-3 border-b flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <h1 className="text-lg font-bold">Bildirimler</h1>
+            {unreadCount > 0 && (
+              <span className="bg-primary text-primary-foreground text-xs px-2 py-1 rounded-full">
+                {unreadCount} yeni
+              </span>
+            )}
+          </div>
+          {unreadCount > 0 && (
+            <button
+              onClick={markAllAsRead}
+              className="text-sm text-primary hover:underline flex items-center gap-1"
+            >
+              <Check className="h-4 w-4" />
+              Tümünü okundu işaretle
+            </button>
+          )}
+        </div>
 
         <div className="p-4 md:p-8">
           {isLoading ? (

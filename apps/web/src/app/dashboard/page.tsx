@@ -104,7 +104,7 @@ export default function DashboardPage() {
       <DashboardSidebar />
 
       <main className="lg:ml-64">
-        <header className="border-b bg-white/50 backdrop-blur-sm sticky top-0 z-50">
+        <header className="border-b bg-white/50 backdrop-blur-sm hidden lg:block sticky top-0 z-30">
           <div className="px-4 md:px-8 h-16 flex items-center justify-between">
             <div><h1 className="text-xl font-bold flex items-center gap-2"><BarChart3 className="h-5 w-5 text-primary" />Kişisel Analizlerim</h1><p className="text-sm text-muted-foreground">Lezzet yolculuğun bir bakışta</p></div>
             <div className="flex items-center gap-4">
@@ -113,11 +113,15 @@ export default function DashboardPage() {
             </div>
           </div>
         </header>
+        {/* Mobile page title */}
+        <div className="lg:hidden px-4 py-3 border-b">
+          <h1 className="text-lg font-bold flex items-center gap-2"><BarChart3 className="h-5 w-5 text-primary" />Kişisel Analizlerim</h1>
+        </div>
 
         <div className="p-4 md:p-8">
           {isLoading ? (<div className="flex items-center justify-center py-20"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>) : (
             <div className="space-y-6">
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
                 <StatCard label="Toplam Değerlendirme" value={stats.totalReviews} icon={<Star className="h-5 w-5" />} color="bg-yellow-500" />
                 <StatCard label="Farklı Mekan" value={stats.totalVenues} icon={<MapPin className="h-5 w-5" />} color="bg-blue-500" />
                 <StatCard label="Ortalama Puan" value={stats.avgRating} icon={<Target className="h-5 w-5" />} color="bg-green-500" suffix="/5" />

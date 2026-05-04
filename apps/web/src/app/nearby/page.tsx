@@ -250,7 +250,7 @@ export default function NearbyPage() {
   }, [filteredVenues]);
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background pb-20 lg:pb-0">
       <AppTopNav />
       {/* Page Controls */}
       <div className="border-b bg-white/50 backdrop-blur-sm sticky top-14 z-40">

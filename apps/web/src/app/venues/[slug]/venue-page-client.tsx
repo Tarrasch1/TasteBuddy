@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { useAuthStore } from '@/stores/auth-store';
 import { toast } from 'sonner';
+import { AppTopNav, AppBottomNav } from '@/components/app-nav';
 
 
 
@@ -808,15 +809,15 @@ export default function VenueDetailPage() {
   }];
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="border-b bg-white/50 backdrop-blur-sm sticky top-0 z-50">
-        <div className="container mx-auto px-4 h-16 flex items-center justify-between">
-          <Link href="/explore" className="flex items-center gap-2 text-muted-foreground hover:text-foreground">
-            <ChevronLeft className="h-5 w-5" />
+    <div className="min-h-screen bg-background pb-20 lg:pb-0">
+      <AppTopNav />
+      {/* Venue Controls */}
+      <div className="border-b bg-white/50 backdrop-blur-sm sticky top-14 z-40">
+        <div className="container mx-auto px-4 h-12 flex items-center justify-between">
+          <Link href="/explore" className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
+            <ChevronLeft className="h-4 w-4" />
             Geri
           </Link>
-          
           <div className="flex items-center gap-2">
             <button
               onClick={handleSave}
@@ -834,7 +835,7 @@ export default function VenueDetailPage() {
             </button>
           </div>
         </div>
-      </header>
+      </div>
 
       {/* Hero Image */}
       <div className="relative h-64 md:h-80 bg-gradient-to-br from-primary/20 to-primary/5">
@@ -1409,6 +1410,8 @@ export default function VenueDetailPage() {
           </div>
         </div>
       )}
+
+      <AppBottomNav />
     </div>
   );
 }

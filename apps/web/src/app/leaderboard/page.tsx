@@ -141,17 +141,17 @@ export default function LeaderboardPage() {
               <p className="opacity-90">En çok değerlendirilen mekanlar ve ürünler</p>
             </div>
           </div>
-          <div className="grid grid-cols-3 gap-4 mt-6">
-            <div className="bg-white/20 rounded-xl p-3 text-center">
-              <p className="text-3xl font-bold">1,234</p>
-              <p className="text-sm opacity-90">Mekan</p>
+          <div className="grid grid-cols-3 gap-2 sm:gap-4 mt-6">
+            <div className="bg-white/20 rounded-xl p-2 sm:p-3 text-center">
+              <p className="text-xl sm:text-3xl font-bold">1,234</p>
+              <p className="text-xs sm:text-sm opacity-90">Mekan</p>
             </div>
-            <div className="bg-white/20 rounded-xl p-3 text-center">
-              <p className="text-3xl font-bold">45.6K</p>
-              <p className="text-sm opacity-90">Değerlendirme</p>
+            <div className="bg-white/20 rounded-xl p-2 sm:p-3 text-center">
+              <p className="text-xl sm:text-3xl font-bold">45.6K</p>
+              <p className="text-xs sm:text-sm opacity-90">Değerlendirme</p>
             </div>
-            <div className="bg-white/20 rounded-xl p-3 text-center">
-              <p className="text-3xl font-bold">12.3K</p>
+            <div className="bg-white/20 rounded-xl p-2 sm:p-3 text-center">
+              <p className="text-xl sm:text-3xl font-bold">12.3K</p>
               <p className="text-sm opacity-90">Kullanıcı</p>
             </div>
           </div>
